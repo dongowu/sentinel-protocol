@@ -1,0 +1,13 @@
+{
+  "vault_id": "0xVAULT_OBJECT_ID_HERE",
+  "owner_address": "0xYOUR_SUI_ADDRESS_HERE",
+  "heartbeat_interval": "168h",
+  "sui_rpc_url": "https://fullnode.testnet.sui.io:443",
+  "package_id": "0xYOUR_PACKAGE_ID_HERE",
+  "private_key": "",
+
+  "activity_check_interval": "1m",
+  "inactivity_threshold": "24h",
+  "emergency_threshold": "72h",
+  "smart_heartbeat": true
+}

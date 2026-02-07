@@ -1,0 +1,28 @@
+This is a test will document for the Lazarus Protocol.
+
+LAST WILL AND TESTAMENT
+=======================
+
+I, John Doe, being of sound mind, do hereby declare this to be my Last Will and Testament.
+
+ARTICLE I: DIGITAL ASSETS
+--------------------------
+All cryptocurrency wallets and private keys are stored in the encrypted vault.
+Access credentials for the following accounts:
+- Email: john.doe@example.com
+- Cloud Storage: Encrypted backup keys
+- Cryptocurrency Wallets: See attached seed phrases
+
+ARTICLE II: BENEFICIARIES
+--------------------------
+Primary Beneficiary: Jane Doe (Spouse)
+Sui Address: 0x1234567890abcdef1234567890abcdef12345678
+
+ARTICLE III: INSTRUCTIONS
+--------------------------
+This document has been encrypted using the Lazarus Protocol.
+The decryption key is held securely and will be released to the beneficiary
+after 30 days of inactivity on the blockchain heartbeat.
+
+Signed: John Doe
+Date: 2026-02-07

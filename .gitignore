@@ -1,0 +1,36 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# Move
+/build/
+Move.lock
+
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.key
+*.pem
+.env
+secrets/
+
+# Temporary files
+*.tmp
+*.log

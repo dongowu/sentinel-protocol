@@ -1,0 +1,25 @@
+{
+  "vault_id": "0xVAULT_OBJECT_ID_HERE",
+  "owner_address": "0xYOUR_SUI_ADDRESS_HERE",
+  "heartbeat_interval": "168h",
+  "sui_rpc_url": "https://fullnode.testnet.sui.io:443",
+  "package_id": "0xYOUR_PACKAGE_ID_HERE",
+  "private_key": "",
+
+  "activity_check_interval": "1m",
+  "inactivity_threshold": "24h",
+  "emergency_threshold": "72h",
+  "smart_heartbeat": true,
+
+  "deepbook": {
+    "enabled": true,
+    "pool_id": "0xDEEPBOOK_POOL_ID",
+    "base_asset": "0xMEME_COIN_TYPE",
+    "quote_asset": "0xUSDC_TYPE",
+    "slippage_bps": 100,
+    "min_output_amount": "1000000",
+    "asset_balances": {
+      "0xMEME_COIN_TYPE": "0xYOUR_MEME_COIN_OBJECT_ID"
+    }
+  }
+}

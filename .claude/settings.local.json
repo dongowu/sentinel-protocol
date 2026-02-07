@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sui move build:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo build:*)",
+      "Bash(./target/release/lazarus-vault.exe:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(sui client:*)",
+      "Bash(curl:*)",
+      "Bash(echo:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git config:*)"
+    ]
+  }
+}
