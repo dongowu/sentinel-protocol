@@ -121,6 +121,9 @@ Create `config.json`:
 | `sentinel.anchor_enabled` | bool | `false` | Anchor audit hashes to Sui |
 | `sentinel.anchor_package` | string | - | Package ID containing `sentinel_audit::record_audit` |
 | `sentinel.anchor_registry` | string | - | Shared `Registry` object ID for Sentinel audit policy |
+| `sentinel.hash_cli_path` | string | `../rustcli/target/release/lazarus-vault` | Rust binary path for deterministic audit hashing |
+| `sentinel.sign_cli_path` | string | `../rustcli/target/release/lazarus-vault` | Rust binary path for audit signatures |
+| `sentinel.sign_private_key` | string | empty | 32-byte hex seed used for ed25519 signing |
 
 ## Usage
 

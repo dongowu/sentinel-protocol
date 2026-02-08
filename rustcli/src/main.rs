@@ -3,7 +3,8 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{Parser, Subcommand};
+use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -19,7 +20,7 @@ struct Args {
     command: Commands,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Subcommand, Debug)]
 enum Commands {
     /// Encrypt a file and store it on Walrus Protocol
     EncryptAndStore {
@@ -34,6 +35,32 @@ enum Commands {
         /// Number of epochs to store (optional, defaults to 1)
         #[arg(short, long, default_value = "1")]
         epochs: u64,
+    },
+
+    /// Compute deterministic audit hash for Sentinel records
+    HashAudit {
+        #[arg(long)]
+        action: String,
+        #[arg(long)]
+        prompt: String,
+        #[arg(long)]
+        score: u8,
+        #[arg(long)]
+        tags: String,
+        #[arg(long)]
+        decision: String,
+        #[arg(long)]
+        reason: String,
+        #[arg(long)]
+        timestamp: String,
+    },
+
+    /// Sign an audit hash with ed25519 private key (hex 32-byte seed)
+    SignAudit {
+        #[arg(long)]
+        record_hash: String,
+        #[arg(long)]
+        private_key: String,
     },
 }
 
@@ -50,6 +77,29 @@ struct EncryptionOutput {
     original_size: usize,
     /// Size of the encrypted blob in bytes
     encrypted_size: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AuditHashOutput {
+    record_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AuditSignOutput {
+    record_hash: String,
+    signature: String,
+    public_key: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CanonicalAuditRecord {
+    action: String,
+    prompt: String,
+    score: u8,
+    tags: Vec<String>,
+    decision: String,
+    reason: String,
+    timestamp: String,
 }
 
 /// Walrus API response structure
@@ -95,6 +145,23 @@ fn main() -> Result<()> {
             epochs,
         } => {
             encrypt_and_store(&file, &publisher, epochs)?;
+        }
+        Commands::HashAudit {
+            action,
+            prompt,
+            score,
+            tags,
+            decision,
+            reason,
+            timestamp,
+        } => {
+            hash_audit(action, prompt, score, tags, decision, reason, timestamp)?;
+        }
+        Commands::SignAudit {
+            record_hash,
+            private_key,
+        } => {
+            sign_audit(&record_hash, &private_key)?;
         }
     }
 
@@ -168,8 +235,7 @@ fn encrypt_data(plaintext: &[u8]) -> Result<(Vec<u8>, [u8; 32], [u8; 12])> {
     let nonce = Nonce::from_slice(&nonce_bytes);
 
     // Create cipher instance
-    let cipher = Aes256Gcm::new_from_slice(&key)
-        .context("Failed to create AES-256-GCM cipher")?;
+    let cipher = Aes256Gcm::new_from_slice(&key).context("Failed to create AES-256-GCM cipher")?;
 
     // Encrypt the data
     let ciphertext = cipher
@@ -201,9 +267,7 @@ fn encode_decryption_key(key: &[u8; 32], nonce: &[u8; 12]) -> String {
 /// Returns the blob ID on success
 fn upload_to_walrus(data: &[u8], publisher_url: &str, epochs: u64) -> Result<String> {
     let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(async {
-        upload_to_walrus_async(data, publisher_url, epochs).await
-    })
+    runtime.block_on(async { upload_to_walrus_async(data, publisher_url, epochs).await })
 }
 
 async fn upload_to_walrus_async(data: &[u8], publisher_url: &str, epochs: u64) -> Result<String> {
@@ -245,6 +309,68 @@ async fn upload_to_walrus_async(data: &[u8], publisher_url: &str, epochs: u64) -
     walrus_response
         .get_blob_id()
         .ok_or_else(|| anyhow::anyhow!("Walrus response missing blob ID"))
+}
+
+fn hash_audit(
+    action: String,
+    prompt: String,
+    score: u8,
+    tags: String,
+    decision: String,
+    reason: String,
+    timestamp: String,
+) -> Result<()> {
+    let mut parsed_tags: Vec<String> = tags
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    parsed_tags.sort();
+
+    let record = CanonicalAuditRecord {
+        action,
+        prompt,
+        score,
+        tags: parsed_tags,
+        decision,
+        reason,
+        timestamp,
+    };
+
+    let canonical = serde_json::to_string(&record)?;
+    let mut hasher = Sha256::new();
+    hasher.update(canonical.as_bytes());
+    let record_hash = format!("0x{}", hex::encode(hasher.finalize()));
+
+    let output = AuditHashOutput { record_hash };
+    println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
+}
+
+fn sign_audit(record_hash: &str, private_key_hex: &str) -> Result<()> {
+    let hash_bytes = hex::decode(record_hash.trim_start_matches("0x"))
+        .context("record_hash must be a hex string")?;
+
+    let sk_bytes =
+        hex::decode(private_key_hex.trim_start_matches("0x")).context("private_key must be hex")?;
+    if sk_bytes.len() != 32 {
+        anyhow::bail!("private_key must be 32 bytes (64 hex chars)");
+    }
+
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&sk_bytes);
+    let signing_key = SigningKey::from_bytes(&key);
+    let verifying_key: VerifyingKey = signing_key.verifying_key();
+    let sig = signing_key.sign(&hash_bytes);
+
+    let output = AuditSignOutput {
+        record_hash: record_hash.to_string(),
+        signature: hex::encode(sig.to_bytes()),
+        public_key: hex::encode(verifying_key.to_bytes()),
+    };
+
+    println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
 }
 
 #[cfg(test)]

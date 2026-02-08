@@ -25,6 +25,10 @@ type SentinelConfig struct {
 	AnchorModule   string `json:"anchor_module"`
 	AnchorFunc     string `json:"anchor_function"`
 	AnchorRegistry string `json:"anchor_registry"`
+
+	HashCLIPath string `json:"hash_cli_path"`
+	SignCLIPath string `json:"sign_cli_path"`
+	SignPrivKey string `json:"sign_private_key"`
 }
 
 // RiskEvaluation is the policy engine output.
@@ -45,6 +49,8 @@ type AuditRecord struct {
 	Decision    string    `json:"decision"`
 	Reason      string    `json:"reason"`
 	RecordHash  string    `json:"record_hash"`
+	Signature   string    `json:"signature,omitempty"`
+	PublicKey   string    `json:"public_key,omitempty"`
 	TxDigest    string    `json:"tx_digest,omitempty"`
 	AnchorError string    `json:"anchor_error,omitempty"`
 }
@@ -70,6 +76,12 @@ func NewSentinelGuard(cfg *SentinelConfig) *SentinelGuard {
 	}
 	if copyCfg.AnchorFunc == "" {
 		copyCfg.AnchorFunc = "record_audit"
+	}
+	if copyCfg.HashCLIPath == "" {
+		copyCfg.HashCLIPath = "../rustcli/target/release/lazarus-vault"
+	}
+	if copyCfg.SignCLIPath == "" {
+		copyCfg.SignCLIPath = copyCfg.HashCLIPath
 	}
 
 	return &SentinelGuard{cfg: copyCfg}
@@ -140,6 +152,10 @@ func (sg *SentinelGuard) Enforce(action, prompt string) (RiskEvaluation, *AuditR
 	}
 
 	rec.RecordHash = sg.computeHash(rec)
+	if signed, err := sg.signHash(rec.RecordHash); err == nil {
+		rec.Signature = signed.Signature
+		rec.PublicKey = signed.PublicKey
+	}
 
 	if err := sg.appendAudit(rec); err != nil {
 		return eval, rec, err
@@ -182,6 +198,10 @@ func (sg *SentinelGuard) appendAudit(rec *AuditRecord) error {
 }
 
 func (sg *SentinelGuard) computeHash(rec *AuditRecord) string {
+	if out, err := sg.hashViaRust(rec); err == nil && out.RecordHash != "" {
+		return out.RecordHash
+	}
+
 	base := fmt.Sprintf("%s|%s|%s|%d|%s|%s|%s",
 		rec.Timestamp.Format(time.RFC3339Nano),
 		rec.Action,
@@ -236,6 +256,67 @@ func (sg *SentinelGuard) anchorToSui(rec *AuditRecord) (string, error) {
 		return strings.TrimSpace(strings.TrimPrefix(line, "Transaction Digest:")), nil
 	}
 	return "", nil
+}
+
+type hashCLIOutput struct {
+	RecordHash string `json:"record_hash"`
+}
+
+type signCLIOutput struct {
+	RecordHash string `json:"record_hash"`
+	Signature  string `json:"signature"`
+	PublicKey  string `json:"public_key"`
+}
+
+func (sg *SentinelGuard) hashViaRust(rec *AuditRecord) (*hashCLIOutput, error) {
+	if sg.cfg.HashCLIPath == "" {
+		return nil, fmt.Errorf("hash_cli_path not configured")
+	}
+
+	cmd := exec.Command(
+		sg.cfg.HashCLIPath,
+		"hash-audit",
+		"--action", rec.Action,
+		"--prompt", rec.Prompt,
+		"--score", fmt.Sprintf("%d", rec.Score),
+		"--tags", strings.Join(rec.Tags, ","),
+		"--decision", rec.Decision,
+		"--reason", rec.Reason,
+		"--timestamp", rec.Timestamp.Format(time.RFC3339Nano),
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("hash-audit failed: %v, output: %s", err, string(out))
+	}
+
+	var parsed hashCLIOutput
+	if err := json.Unmarshal(out, &parsed); err != nil {
+		return nil, fmt.Errorf("hash-audit parse failed: %w", err)
+	}
+	return &parsed, nil
+}
+
+func (sg *SentinelGuard) signHash(recordHash string) (*signCLIOutput, error) {
+	if sg.cfg.SignCLIPath == "" || strings.TrimSpace(sg.cfg.SignPrivKey) == "" {
+		return nil, fmt.Errorf("signing not configured")
+	}
+
+	cmd := exec.Command(
+		sg.cfg.SignCLIPath,
+		"sign-audit",
+		"--record-hash", recordHash,
+		"--private-key", sg.cfg.SignPrivKey,
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("sign-audit failed: %v, output: %s", err, string(out))
+	}
+
+	var parsed signCLIOutput
+	if err := json.Unmarshal(out, &parsed); err != nil {
+		return nil, fmt.Errorf("sign-audit parse failed: %w", err)
+	}
+	return &parsed, nil
 }
 
 func hasAny(src string, needles ...string) bool {
