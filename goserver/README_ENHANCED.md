@@ -9,6 +9,8 @@ Advanced heartbeat daemon with system activity monitoring and smart heartbeat lo
 - **Smart Heartbeat**: Only sends heartbeats when user is active
 - **Emergency Detection**: Automatically detects prolonged inactivity
 - **Sui Blockchain Integration**: Direct SDK integration or CLI fallback
+- **Sentinel Policy Gate**: Scores OpenClaw tasks, blocks risky actions, writes JSONL audits
+- **On-Chain Audit Anchor**: Optionally anchors audit hashes to Sui for tamper-evident logs
 - **Graceful Shutdown**: Proper signal handling
 
 ### Activity Monitoring
@@ -84,7 +86,17 @@ Create `config.json`:
   "activity_check_interval": "1m",
   "inactivity_threshold": "24h",
   "emergency_threshold": "72h",
-  "smart_heartbeat": true
+  "smart_heartbeat": true,
+
+  "sentinel": {
+    "enabled": true,
+    "risk_threshold": 70,
+    "audit_log_path": "./audit/sentinel-audit.jsonl",
+    "anchor_enabled": false,
+    "anchor_package": "0xYOUR_AUDIT_PACKAGE_ID",
+    "anchor_module": "sentinel_audit",
+    "anchor_function": "record_audit"
+  }
 }
 ```
 
@@ -102,6 +114,11 @@ Create `config.json`:
 | `inactivity_threshold` | duration | `24h` | Stop heartbeats after this |
 | `emergency_threshold` | duration | `72h` | Emergency mode trigger |
 | `smart_heartbeat` | bool | `true` | Enable smart heartbeat logic |
+| `sentinel.enabled` | bool | `false` | Enable OpenClaw risk scoring and policy blocking |
+| `sentinel.risk_threshold` | int | `70` | Block tasks at or above this score |
+| `sentinel.audit_log_path` | string | `./audit/sentinel-audit.jsonl` | Local audit log path |
+| `sentinel.anchor_enabled` | bool | `false` | Anchor audit hashes to Sui |
+| `sentinel.anchor_package` | string | - | Package ID containing `sentinel_audit::record_audit` |
 
 ## Usage
 

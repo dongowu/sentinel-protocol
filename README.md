@@ -12,7 +12,8 @@ Lazarus Protocol enables secure digital inheritance through a dead man's switch 
 lazarus-protocol/
 ├── contract/              # Sui Move Smart Contract
 │   ├── sources/
-│   │   └── lazarus_protocol.move
+│   │   ├── lazarus_protocol.move
+│   │   └── sentinel_audit.move
 │   ├── Move.toml
 │   └── README.md
 │
@@ -195,6 +196,7 @@ Run the daemon:
 3. **On-Chain Logic**: Transparent and auditable
 4. **Access Control**: Owner-only heartbeat enforcement
 5. **Event Logging**: All actions emit events for auditing
+6. **Sentinel Audit Anchoring**: OpenClaw security decisions can be hashed and anchored on Sui
 
 ## 🛠️ Technology Stack
 
