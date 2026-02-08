@@ -24,6 +24,7 @@
     "anchor_enabled": false,
     "anchor_package": "0xYOUR_AUDIT_PACKAGE_ID",
     "anchor_module": "sentinel_audit",
-    "anchor_function": "record_audit"
+    "anchor_function": "record_audit",
+    "anchor_registry": "0xYOUR_REGISTRY_OBJECT_ID"
   }
 }

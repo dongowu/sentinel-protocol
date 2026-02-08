@@ -20,10 +20,11 @@ type SentinelConfig struct {
 	AuditLogPath  string `json:"audit_log_path"`
 
 	// Optional on-chain anchor fields. Keep them configurable to work with different Move modules.
-	AnchorEnabled bool   `json:"anchor_enabled"`
-	AnchorPackage string `json:"anchor_package"`
-	AnchorModule  string `json:"anchor_module"`
-	AnchorFunc    string `json:"anchor_function"`
+	AnchorEnabled  bool   `json:"anchor_enabled"`
+	AnchorPackage  string `json:"anchor_package"`
+	AnchorModule   string `json:"anchor_module"`
+	AnchorFunc     string `json:"anchor_function"`
+	AnchorRegistry string `json:"anchor_registry"`
 }
 
 // RiskEvaluation is the policy engine output.
@@ -145,7 +146,7 @@ func (sg *SentinelGuard) Enforce(action, prompt string) (RiskEvaluation, *AuditR
 	}
 
 	if sg.cfg.AnchorEnabled {
-		tx, err := sg.anchorToSui(rec.RecordHash)
+		tx, err := sg.anchorToSui(rec)
 		if err != nil {
 			rec.AnchorError = err.Error()
 		} else {
@@ -194,9 +195,25 @@ func (sg *SentinelGuard) computeHash(rec *AuditRecord) string {
 	return "0x" + hex.EncodeToString(sum[:])
 }
 
-func (sg *SentinelGuard) anchorToSui(recordHash string) (string, error) {
+func (sg *SentinelGuard) anchorToSui(rec *AuditRecord) (string, error) {
 	if sg.cfg.AnchorPackage == "" {
 		return "", fmt.Errorf("anchor_package is required when anchor_enabled=true")
+	}
+	if sg.cfg.AnchorRegistry == "" {
+		return "", fmt.Errorf("anchor_registry is required when anchor_enabled=true")
+	}
+
+	actionTag := actionToTag(rec.Action)
+	riskScore := rec.Score
+	if riskScore < 0 {
+		riskScore = 0
+	}
+	if riskScore > 100 {
+		riskScore = 100
+	}
+	blocked := "false"
+	if rec.Decision == "blocked" {
+		blocked = "true"
 	}
 
 	cmd := exec.Command(
@@ -204,7 +221,7 @@ func (sg *SentinelGuard) anchorToSui(recordHash string) (string, error) {
 		"--package", sg.cfg.AnchorPackage,
 		"--module", sg.cfg.AnchorModule,
 		"--function", sg.cfg.AnchorFunc,
-		"--args", recordHash,
+		"--args", sg.cfg.AnchorRegistry, rec.RecordHash, fmt.Sprintf("%d", actionTag), fmt.Sprintf("%d", riskScore), blocked, "0x6",
 		"--gas-budget", "10000000",
 	)
 	out, err := cmd.CombinedOutput()
@@ -257,4 +274,17 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max]
+}
+
+func actionToTag(action string) int {
+	switch strings.ToUpper(strings.TrimSpace(action)) {
+	case "WAKE_UP":
+		return 2
+	case "LAST_WORDS":
+		return 3
+	case "EXEC", "SHELL":
+		return 1
+	default:
+		return 9
+	}
 }

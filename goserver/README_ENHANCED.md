@@ -95,7 +95,8 @@ Create `config.json`:
     "anchor_enabled": false,
     "anchor_package": "0xYOUR_AUDIT_PACKAGE_ID",
     "anchor_module": "sentinel_audit",
-    "anchor_function": "record_audit"
+    "anchor_function": "record_audit",
+    "anchor_registry": "0xYOUR_REGISTRY_OBJECT_ID"
   }
 }
 ```
@@ -119,6 +120,7 @@ Create `config.json`:
 | `sentinel.audit_log_path` | string | `./audit/sentinel-audit.jsonl` | Local audit log path |
 | `sentinel.anchor_enabled` | bool | `false` | Anchor audit hashes to Sui |
 | `sentinel.anchor_package` | string | - | Package ID containing `sentinel_audit::record_audit` |
+| `sentinel.anchor_registry` | string | - | Shared `Registry` object ID for Sentinel audit policy |
 
 ## Usage
 

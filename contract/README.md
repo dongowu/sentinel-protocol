@@ -131,6 +131,52 @@ sui client call \
   --gas-budget 10000000
 ```
 
+## Sentinel Audit Module (OpenClaw x Sui)
+
+The package also includes `sentinel_audit.move` for policy-aware security anchoring.
+
+### Core Objects
+
+- `Registry` (shared): admin, operator allowlist, policy version/hash
+- `AuditAnchoredEvent`: emits hash + risk + policy version + timestamp
+
+### Setup Flow
+
+1. Publish package (runs `init`, creates shared `Registry` object)
+2. Save the `Registry` object ID from publish output
+3. Grant your service wallet as operator
+
+```bash
+sui client call \
+  --package $PACKAGE_ID \
+  --module sentinel_audit \
+  --function set_operator \
+  --args $REGISTRY_ID $SERVICE_ADDRESS true \
+  --gas-budget 10000000
+```
+
+4. (Optional) version your policy hash on-chain
+
+```bash
+sui client call \
+  --package $PACKAGE_ID \
+  --module sentinel_audit \
+  --function update_policy \
+  --args $REGISTRY_ID 2 $POLICY_HASH \
+  --gas-budget 10000000
+```
+
+5. Anchor one audit decision
+
+```bash
+sui client call \
+  --package $PACKAGE_ID \
+  --module sentinel_audit \
+  --function record_audit \
+  --args $REGISTRY_ID $RECORD_HASH 1 92 true 0x6 \
+  --gas-budget 10000000
+```
+
 ## View Functions
 
 Query vault state:
