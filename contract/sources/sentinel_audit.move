@@ -1,14 +1,13 @@
 /// Sentinel Audit: policy-aware, on-chain audit anchoring for OpenClaw actions.
 ///
-/// This version intentionally avoids dynamic fields to keep compatibility with
-/// older Sui toolchains used during hackathons.
+/// This compatibility build keeps storage simple to avoid compiler edge cases
+/// observed on some Sui CLI versions.
 module lazarus_protocol::sentinel_audit {
     use sui::clock::{Self, Clock};
     use sui::event;
     use sui::object::{Self, UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
-    use std::vector;
 
     /// Error: caller is not admin.
     const E_NOT_ADMIN: u64 = 1;
@@ -23,9 +22,9 @@ module lazarus_protocol::sentinel_audit {
     public struct Registry has key {
         id: UID,
         admin: address,
+        operator: address,
         policy_version: u64,
         policy_hash: address,
-        operators: vector<address>,
     }
 
     /// Event emitted whenever policy metadata changes.
@@ -39,7 +38,6 @@ module lazarus_protocol::sentinel_audit {
     public struct OperatorUpdatedEvent has copy, drop {
         operator: address,
         target: address,
-        enabled: bool,
     }
 
     /// Event emitted for each anchored decision.
@@ -56,15 +54,13 @@ module lazarus_protocol::sentinel_audit {
     /// Package init: creates shared registry with initial policy metadata.
     fun init(ctx: &mut TxContext) {
         let sender = tx_context::sender(ctx);
-        let mut operators = vector::empty<address>();
-        vector::push_back(&mut operators, sender);
 
         let registry = Registry {
             id: object::new(ctx),
             admin: sender,
+            operator: sender,
             policy_version: 1,
             policy_hash: @0x0,
-            operators,
         };
         transfer::share_object(registry);
     }
@@ -89,39 +85,22 @@ module lazarus_protocol::sentinel_audit {
         });
     }
 
-    /// Admin grants/revokes an address that can anchor audit records.
+    /// Admin sets the operator address that can anchor audit records.
     public entry fun set_operator(
         registry: &mut Registry,
         operator: address,
-        enabled: bool,
         ctx: &mut TxContext,
     ) {
         assert!(tx_context::sender(ctx) == registry.admin, E_NOT_ADMIN);
-
-        let (exists, idx) = find_operator(&registry.operators, operator);
-        if (enabled) {
-            if (!exists) {
-                vector::push_back(&mut registry.operators, operator);
-            };
-        } else {
-            if (exists) {
-                vector::remove(&mut registry.operators, idx);
-            };
-        };
+        registry.operator = operator;
 
         event::emit(OperatorUpdatedEvent {
             operator: tx_context::sender(ctx),
             target: operator,
-            enabled,
         });
     }
 
     /// Anchor one Sentinel decision hash under current policy context.
-    ///
-    /// - `record_hash`: deterministic hash of the off-chain decision payload.
-    /// - `action_tag`: app-defined action enum (e.g. 1=exec,2=browser,3=message).
-    /// - `risk_score`: normalized 0-100 risk score.
-    /// - `blocked`: true if request was blocked.
     public entry fun record_audit(
         registry: &Registry,
         record_hash: address,
@@ -132,7 +111,7 @@ module lazarus_protocol::sentinel_audit {
         ctx: &mut TxContext,
     ) {
         let sender = tx_context::sender(ctx);
-        assert!(is_operator(registry, sender), E_NOT_OPERATOR);
+        assert!(sender == registry.admin || sender == registry.operator, E_NOT_OPERATOR);
 
         event::emit(AuditAnchoredEvent {
             operator: sender,
@@ -145,7 +124,6 @@ module lazarus_protocol::sentinel_audit {
         });
     }
 
-    /// View helpers
     public fun policy_version(registry: &Registry): u64 {
         registry.policy_version
     }
@@ -158,23 +136,7 @@ module lazarus_protocol::sentinel_audit {
         registry.admin
     }
 
-    public fun is_operator(registry: &Registry, operator: address): bool {
-        if (operator == registry.admin) {
-            return true
-        };
-        let (exists, _) = find_operator(&registry.operators, operator);
-        exists
-    }
-
-    fun find_operator(operators: &vector<address>, target: address): (bool, u64) {
-        let len = vector::length(operators);
-        let mut i = 0;
-        while (i < len) {
-            if (*vector::borrow(operators, i) == target) {
-                return (true, i)
-            };
-            i = i + 1;
-        };
-        (false, 0)
+    public fun operator(registry: &Registry): address {
+        registry.operator
     }
 }
