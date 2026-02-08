@@ -3,11 +3,7 @@
 /// This compatibility build keeps storage simple to avoid compiler edge cases
 /// observed on some Sui CLI versions.
 module lazarus_protocol::sentinel_audit {
-    use sui::clock::{Self, Clock};
-    use sui::event;
-    use sui::object::{Self, UID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
+    use sui::clock::Clock;
 
     /// Error: caller is not admin.
     const E_NOT_ADMIN: u64 = 1;
@@ -20,7 +16,7 @@ module lazarus_protocol::sentinel_audit {
 
     /// Shared registry that defines who can anchor records and policy metadata.
     public struct Registry has key {
-        id: UID,
+        id: sui::object::UID,
         admin: address,
         operator: address,
         policy_version: u64,
@@ -52,91 +48,80 @@ module lazarus_protocol::sentinel_audit {
     }
 
     /// Package init: creates shared registry with initial policy metadata.
-    fun init(ctx: &mut TxContext) {
-        let sender = tx_context::sender(ctx);
+    fun init(ctx: &mut sui::tx_context::TxContext) {
+        let sender = sui::tx_context::sender(ctx);
 
         let registry = Registry {
-            id: object::new(ctx),
+            id: sui::object::new(ctx),
             admin: sender,
             operator: sender,
             policy_version: 1,
             policy_hash: @0x0,
         };
-        transfer::share_object(registry);
+        sui::transfer::share_object(registry);
     }
 
     /// Admin updates policy version/hash used by off-chain Sentinel logic.
-    public entry fun update_policy(
+    public fun update_policy(
         registry: &mut Registry,
         policy_version: u64,
         policy_hash: address,
-        ctx: &mut TxContext,
+        ctx: &mut sui::tx_context::TxContext,
     ) {
-        assert!(tx_context::sender(ctx) == registry.admin, E_NOT_ADMIN);
+        assert!(sui::tx_context::sender(ctx) == registry.admin, E_NOT_ADMIN);
         assert!(policy_version > 0, E_INVALID_POLICY_VERSION);
 
         registry.policy_version = policy_version;
         registry.policy_hash = policy_hash;
 
-        event::emit(PolicyUpdatedEvent {
-            operator: tx_context::sender(ctx),
+        sui::event::emit(PolicyUpdatedEvent {
+            operator: sui::tx_context::sender(ctx),
             policy_version,
             policy_hash,
         });
     }
 
     /// Admin sets the operator address that can anchor audit records.
-    public entry fun set_operator(
+    public fun set_operator(
         registry: &mut Registry,
         operator: address,
-        ctx: &mut TxContext,
+        ctx: &mut sui::tx_context::TxContext,
     ) {
-        assert!(tx_context::sender(ctx) == registry.admin, E_NOT_ADMIN);
+        assert!(sui::tx_context::sender(ctx) == registry.admin, E_NOT_ADMIN);
         registry.operator = operator;
 
-        event::emit(OperatorUpdatedEvent {
-            operator: tx_context::sender(ctx),
+        sui::event::emit(OperatorUpdatedEvent {
+            operator: sui::tx_context::sender(ctx),
             target: operator,
         });
     }
 
     /// Anchor one Sentinel decision hash under current policy context.
-    public entry fun record_audit(
+    public fun record_audit(
         registry: &Registry,
         record_hash: address,
         action_tag: u8,
         risk_score: u8,
         blocked: bool,
         clock: &Clock,
-        ctx: &mut TxContext,
+        ctx: &mut sui::tx_context::TxContext,
     ) {
-        let sender = tx_context::sender(ctx);
+        let sender = sui::tx_context::sender(ctx);
         assert!(sender == registry.admin || sender == registry.operator, E_NOT_OPERATOR);
 
-        event::emit(AuditAnchoredEvent {
+        sui::event::emit(AuditAnchoredEvent {
             operator: sender,
             record_hash,
             action_tag,
             risk_score,
             blocked,
             policy_version: registry.policy_version,
-            timestamp_ms: clock::timestamp_ms(clock),
+            timestamp_ms: sui::clock::timestamp_ms(clock),
         });
     }
 
-    public fun policy_version(registry: &Registry): u64 {
-        registry.policy_version
-    }
-
-    public fun policy_hash(registry: &Registry): address {
-        registry.policy_hash
-    }
-
-    public fun admin(registry: &Registry): address {
-        registry.admin
-    }
-
-    public fun operator(registry: &Registry): address {
-        registry.operator
-    }
+    public fun policy_version(registry: &Registry): u64 { registry.policy_version }
+    public fun policy_hash(registry: &Registry): address { registry.policy_hash }
+    public fun admin(registry: &Registry): address { registry.admin }
+    public fun operator(registry: &Registry): address { registry.operator }
 }
