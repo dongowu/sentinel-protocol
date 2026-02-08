@@ -1,4 +1,4 @@
-This is a test will document for the Lazarus Protocol.
+This is a test will document for the Sentinel Protocol.
 
 LAST WILL AND TESTAMENT
 =======================
@@ -20,7 +20,7 @@ Sui Address: 0x1234567890abcdef1234567890abcdef12345678
 
 ARTICLE III: INSTRUCTIONS
 --------------------------
-This document has been encrypted using the Lazarus Protocol.
+This document has been encrypted using the Sentinel Protocol.
 The decryption key is held securely and will be released to the beneficiary
 after 30 days of inactivity on the blockchain heartbeat.
 

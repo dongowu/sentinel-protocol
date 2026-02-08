@@ -1,4 +1,4 @@
-# Lazarus Protocol - 快速启动指南
+# Sentinel Protocol - 快速启动指南
 
 ## 🚀 5分钟快速演示
 
@@ -39,7 +39,7 @@ cd goserver
 
 **预期输出**:
 ```
-=== Lazarus Protocol Enhanced Daemon ===
+=== Sentinel Protocol Enhanced Daemon ===
 Vault ID: 0xTEST
 Smart Heartbeat: true
 Activity Check: 10s
@@ -192,7 +192,7 @@ A: 确保 Go 1.21+, Rust 1.70+, Sui CLI 已安装
 
 ## 🎉 完成！
 
-您现在拥有一个**完整的、可演示的、创新的 Lazarus Protocol 系统**！
+您现在拥有一个**完整的、可演示的、创新的 Sentinel Protocol 系统**！
 
 **核心亮点**:
 - 🔐 零知识加密

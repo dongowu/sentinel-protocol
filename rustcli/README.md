@@ -1,10 +1,10 @@
 # Lazarus Vault - Rust CLI Tool
 
-Zero-knowledge encryption tool for the Digital Lazarus Protocol on Sui.
+Zero-knowledge encryption tool for the Sentinel Protocol on Sui.
 
 ## Overview
 
-This CLI tool provides the security core of the Lazarus Protocol. It encrypts sensitive files locally using AES-256-GCM and uploads them to Walrus Protocol (Sui's decentralized storage) with zero-knowledge guarantees.
+This CLI tool provides the security core of the Sentinel Protocol. It encrypts sensitive files locally using AES-256-GCM and uploads them to Walrus Protocol (Sui's decentralized storage) with zero-knowledge guarantees.
 
 ## Features
 

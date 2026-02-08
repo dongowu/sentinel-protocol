@@ -84,7 +84,7 @@ func mainEnhanced() {
 
 // startEnhancedDaemon runs the daemon with activity monitoring and smart heartbeats
 func startEnhancedDaemon(config *EnhancedConfig) {
-	log.Println("=== Lazarus Protocol Enhanced Daemon ===")
+	log.Println("=== Sentinel Protocol Enhanced Daemon ===")
 	log.Printf("Vault ID: %s", config.VaultID)
 	log.Printf("Owner: %s", config.OwnerAddress)
 	log.Printf("Smart Heartbeat: %v", config.SmartHeartbeat)
@@ -304,7 +304,7 @@ func sendHeartbeatCLI(config *EnhancedConfig) error {
 
 // startCLIDaemon runs the daemon using Sui CLI (fallback mode)
 func startCLIDaemon(config *EnhancedConfig) {
-	log.Println("=== Lazarus Protocol Daemon (CLI Mode) ===")
+	log.Println("=== Sentinel Protocol Daemon (CLI Mode) ===")
 	log.Println("⚠️  Running in CLI fallback mode")
 	log.Println()
 

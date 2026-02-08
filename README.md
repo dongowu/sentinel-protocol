@@ -2,7 +2,7 @@
 
 Verifiable security layer for local autonomous agents.
 
-This repository started as Lazarus Protocol and now includes Sentinel, a policy gate + audit anchoring workflow for OpenClaw and Sui.
+This repository started as Sentinel Protocol and now includes Sentinel, a policy gate + audit anchoring workflow for OpenClaw and Sui.
 
 ## What This Project Does
 
@@ -116,18 +116,7 @@ Expected evidence: `sentinel_audit::AuditAnchoredEvent` with `action_tag`, `risk
 
 ## Demo Video
 
-Recommended structure (90-140s):
-
-1. Threat input
-2. Before (no gate) vs After (Sentinel)
-3. Benchmark metrics
-4. On-chain event proof
-5. Final takeaway
-
-Suggested video file:
-
-- `sentinel-demo-single-paused-novoice-*.mp4` (raw)
-- edited version with overlays in CapCut
+https://youtu.be/tpqgaW6TXyI
 
 ## Security Notes
 

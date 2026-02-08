@@ -1,4 +1,4 @@
-# Lazarus Protocol - Sui Smart Contract
+# Sentinel Protocol - Sui Smart Contract
 
 Dead man's switch implementation on Sui blockchain using Move language.
 

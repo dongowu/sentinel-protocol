@@ -1,4 +1,4 @@
-# Lazarus Protocol - DeepBook "Panic Sell" Integration
+# Sentinel Protocol - DeepBook "Panic Sell" Integration
 
 ## 概述
 

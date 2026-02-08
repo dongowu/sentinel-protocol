@@ -1,8 +1,8 @@
-# Lazarus Protocol - 完整项目总结
+# Sentinel Protocol - 完整项目总结
 
 ## 🎯 项目概述
 
-**Lazarus Protocol** 是一个基于 Sui 区块链的去中心化"死人开关"系统，用于数字遗产管理。当用户长时间无活动时，系统会自动触发遗嘱执行，将加密资产转移给指定受益人。
+**Sentinel Protocol** 是一个基于 Sui 区块链的去中心化"死人开关"系统，用于数字遗产管理。当用户长时间无活动时，系统会自动触发遗嘱执行，将加密资产转移给指定受益人。
 
 ## ✅ 已完成功能清单
 
@@ -89,7 +89,7 @@ cd goserver
 
 **输出**:
 ```
-=== Lazarus Protocol Enhanced Daemon ===
+=== Sentinel Protocol Enhanced Daemon ===
 Vault ID: 0xabc123...
 Owner: 0xdef456...
 Smart Heartbeat: true
@@ -170,7 +170,7 @@ Emergency Threshold: 5m
 
 2. **Twitter 草稿内容**:
    ```
-   This is an automated message from Sui-Lazarus Protocol.
+   This is an automated message from Sui-Sentinel Protocol.
 
    My owner has been inactive for 72 hours.
    The digital legacy protocol has been triggered on Sui Network.
@@ -180,7 +180,7 @@ Emergency Threshold: 5m
 
    Goodbye, world. 🕯️
 
-   #Sui #LazarusProtocol #DigitalLegacy
+   #Sui #SentinelProtocol #DigitalLegacy
    ```
 
 3. **执行 PTB（如果启用 DeepBook）**:

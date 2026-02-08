@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
 
-/// Lazarus Vault - Zero-knowledge encryption for the Digital Lazarus Protocol
+/// Lazarus Vault - Zero-knowledge encryption for Sentinel Protocol
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -379,7 +379,7 @@ mod tests {
 
     #[test]
     fn test_encryption_decryption() {
-        let plaintext = b"Hello, Lazarus Protocol!";
+        let plaintext = b"Hello, Sentinel Protocol!";
         let (ciphertext, key, nonce) = encrypt_data(plaintext).unwrap();
 
         // Verify ciphertext is different from plaintext

@@ -2,8 +2,8 @@
 name = "lazarus-vault"
 version = "0.1.0"
 edition = "2021"
-authors = ["Lazarus Protocol Team"]
-description = "Zero-knowledge encryption tool for the Digital Lazarus Protocol on Sui"
+authors = ["Sentinel Protocol Team"]
+description = "Zero-knowledge encryption tool for the Sentinel Protocol on Sui"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }

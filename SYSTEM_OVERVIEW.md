@@ -1,9 +1,9 @@
-# Lazarus Protocol - Complete System Overview
+# Sentinel Protocol - Complete System Overview
 
 ## 🎯 Project Structure
 
 ```
-lazarus-protocol/
+sentinel-protocol/
 ├── sources/
 │   └── lazarus_protocol.move    # Sui Smart Contract (Dead Man's Switch)
 ├── src/

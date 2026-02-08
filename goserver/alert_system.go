@@ -108,7 +108,7 @@ func (as *AlertSystem) showWindowsAlert(message string) {
 Add-Type -AssemblyName System.Windows.Forms
 $result = [System.Windows.Forms.MessageBox]::Show(
 	"%s",
-	"Lazarus Protocol Alert",
+	"Sentinel Protocol Alert",
 	[System.Windows.Forms.MessageBoxButtons]::YesNo,
 	[System.Windows.Forms.MessageBoxIcon]::Warning
 )
@@ -131,7 +131,7 @@ if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
 func (as *AlertSystem) showMacOSAlert(message string) {
 	// Use osascript to show a dialog
 	script := fmt.Sprintf(`
-display dialog "%s" buttons {"Cancel", "I'm Alive"} default button "I'm Alive" with icon caution with title "Lazarus Protocol Alert"
+display dialog "%s" buttons {"Cancel", "I'm Alive"} default button "I'm Alive" with icon caution with title "Sentinel Protocol Alert"
 `, message)
 
 	cmd := exec.Command("osascript", "-e", script)
@@ -146,7 +146,7 @@ display dialog "%s" buttons {"Cancel", "I'm Alive"} default button "I'm Alive" w
 func (as *AlertSystem) showLinuxAlert(message string) {
 	// Try zenity first (most common)
 	cmd := exec.Command("zenity", "--question",
-		"--title=Lazarus Protocol Alert",
+		"--title=Sentinel Protocol Alert",
 		"--text="+message,
 		"--ok-label=I'm Alive",
 		"--cancel-label=Cancel",
@@ -160,7 +160,7 @@ func (as *AlertSystem) showLinuxAlert(message string) {
 
 	// Fallback to kdialog (KDE)
 	cmd = exec.Command("kdialog", "--yesno", message,
-		"--title", "Lazarus Protocol Alert")
+		"--title", "Sentinel Protocol Alert")
 	err = cmd.Run()
 	if err == nil {
 		as.userResponded <- true
@@ -212,7 +212,7 @@ func (as *AlertSystem) OpenBrowserAlert(inactiveDuration time.Duration) error {
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Lazarus Protocol Alert</title>
+	<title>Sentinel Protocol Alert</title>
 	<style>
 		body {
 			font-family: Arial, sans-serif;

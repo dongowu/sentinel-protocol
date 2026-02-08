@@ -78,7 +78,7 @@ func (oc *OpenClawClient) TriggerLastWords(vaultID, beneficiary string) error {
 	if prompt == "" {
 		prompt = fmt.Sprintf(`Open Twitter (X.com) and draft a tweet (DO NOT POST IT, just draft):
 
-"This is an automated message from Sui-Lazarus Protocol.
+"This is an automated message from Sui-Sentinel Protocol.
 
 My owner has been inactive for 72 hours. The digital legacy protocol has been triggered on Sui Network.
 
@@ -87,7 +87,7 @@ Beneficiary: %s
 
 Goodbye, world. 🕯️
 
-#Sui #LazarusProtocol #DigitalLegacy"
+#Sui #SentinelProtocol #DigitalLegacy"
 
 IMPORTANT: Only draft the tweet, do not post it. This is for demonstration purposes only.`, vaultID, beneficiary)
 	}
@@ -201,7 +201,7 @@ func (oc *OpenClawClient) OpenClawAlertPage(inactiveDuration time.Duration, emer
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head>
-	<title>Lazarus Protocol - OpenClaw Alert</title>
+	<title>Sentinel Protocol - OpenClaw Alert</title>
 	<style>
 		body {
 			font-family: 'Arial', sans-serif;

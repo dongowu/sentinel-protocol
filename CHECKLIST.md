@@ -1,4 +1,4 @@
-# Lazarus Protocol - 项目完成检查清单
+# Sentinel Protocol - 项目完成检查清单
 
 ## ✅ 代码完成度
 
@@ -129,7 +129,7 @@
 - [ ] 添加项目截图
 
 ### 提交材料
-- [ ] 项目名称: Lazarus Protocol
+- [ ] 项目名称: Sentinel Protocol
 - [ ] 项目描述: 去中心化数字遗产管理系统
 - [ ] GitHub 链接
 - [ ] 演示视频链接
@@ -193,7 +193,7 @@
 
 ## 📞 联系信息
 
-- **项目名称**: Lazarus Protocol
+- **项目名称**: Sentinel Protocol
 - **团队名称**: [您的团队名称]
 - **联系邮箱**: [您的邮箱]
 - **GitHub**: [仓库链接]

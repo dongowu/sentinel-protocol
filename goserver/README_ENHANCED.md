@@ -246,7 +246,7 @@ Create `/etc/systemd/system/lazarus-daemon.service`:
 
 ```ini
 [Unit]
-Description=Lazarus Protocol Enhanced Daemon
+Description=Sentinel Protocol Enhanced Daemon
 After=network.target
 
 [Service]
@@ -331,7 +331,7 @@ The daemon logs:
 
 Example output:
 ```
-=== Lazarus Protocol Enhanced Daemon ===
+=== Sentinel Protocol Enhanced Daemon ===
 Vault ID: 0xabc123...
 Owner: 0xdef456...
 Smart Heartbeat: true

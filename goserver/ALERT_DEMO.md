@@ -1,4 +1,4 @@
-# Lazarus Protocol - 警报系统演示指南
+# Sentinel Protocol - 警报系统演示指南
 
 ## 功能概述
 
@@ -161,7 +161,7 @@
 ### 第一幕：正常运行
 
 ```
-旁白："Lazarus Protocol 守护进程正在后台运行..."
+旁白："Sentinel Protocol 守护进程正在后台运行..."
 屏幕：终端显示正常心跳日志
 ```
 
@@ -202,7 +202,7 @@
 ### 测试 GUI 弹窗（Windows）
 
 ```powershell
-powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('Test Alert', 'Lazarus Protocol', [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)"
+powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('Test Alert', 'Sentinel Protocol', [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)"
 ```
 
 ### 测试浏览器警报

@@ -199,7 +199,7 @@ func createSuiVault(beneficiary, blobID string) (string, error) {
 
 // startHeartbeatDaemon runs the heartbeat loop
 func startHeartbeatDaemon(config *Config) {
-	log.Println("=== Lazarus Protocol Heartbeat Daemon ===")
+	log.Println("=== Sentinel Protocol Heartbeat Daemon ===")
 	log.Printf("Vault ID: %s", config.VaultID)
 	log.Printf("Owner: %s", config.OwnerAddress)
 	log.Printf("Heartbeat Interval: %v", config.HeartbeatInterval)

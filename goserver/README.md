@@ -1,4 +1,4 @@
-# Lazarus Protocol - Go Heartbeat Daemon
+# Sentinel Protocol - Go Heartbeat Daemon
 
 Automated heartbeat service that keeps your Lazarus vault alive by periodically calling the `keep_alive` function on the Sui blockchain.
 
@@ -91,7 +91,7 @@ Create `/etc/systemd/system/lazarus-daemon.service`:
 
 ```ini
 [Unit]
-Description=Lazarus Protocol Heartbeat Daemon
+Description=Sentinel Protocol Heartbeat Daemon
 After=network.target
 
 [Service]

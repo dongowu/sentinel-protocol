@@ -1,8 +1,8 @@
-# Lazarus Protocol - 完整项目文档
+# Sentinel Protocol - 完整项目文档
 
 ## 项目概述
 
-**Lazarus Protocol** 是一个基于 Sui 区块链的去中心化"死人开关"系统，用于数字遗产管理。当用户长时间无活动时，系统会自动触发遗嘱执行，将加密资产安全地转移给指定受益人。
+**Sentinel Protocol** 是一个基于 Sui 区块链的去中心化"死人开关"系统，用于数字遗产管理。当用户长时间无活动时，系统会自动触发遗嘱执行，将加密资产安全地转移给指定受益人。
 
 ### 核心特性
 
@@ -17,7 +17,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Lazarus Protocol                          │
+│                    Sentinel Protocol                          │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
@@ -44,7 +44,7 @@
 ## 项目结构
 
 ```
-lazarus-protocol/
+sentinel-protocol/
 ├── contract/                      # Sui Move 智能合约
 │   ├── sources/
 │   │   └── lazarus_protocol.move  # 主合约文件
@@ -241,7 +241,7 @@ lazarus-vault encrypt-and-store \
 **遗言动作** (72小时无活动):
 - 打开 Twitter (X.com)
 - 草拟告别推文
-- 内容: "Sui-Lazarus Protocol triggered. Goodbye, world. 🕯️"
+- 内容: "Sui-Sentinel Protocol triggered. Goodbye, world. 🕯️"
 
 **配置**:
 ```json
@@ -319,7 +319,7 @@ cd goserver
 
 ```
 [终端显示]
-=== Lazarus Protocol Enhanced Daemon ===
+=== Sentinel Protocol Enhanced Daemon ===
 Vault ID: 0xabc123...
 Smart Heartbeat: true
 
@@ -376,10 +376,10 @@ Smart Heartbeat: true
 
 [Twitter 自动打开]
 草稿内容:
-"This is an automated message from Sui-Lazarus Protocol.
+"This is an automated message from Sui-Sentinel Protocol.
 My owner has been inactive for 72 hours.
 The digital legacy protocol has been triggered.
-Goodbye, world. 🕯️ #Sui #LazarusProtocol"
+Goodbye, world. 🕯️ #Sui #SentinelProtocol"
 
 [如果启用 DeepBook]
 🚨 EXECUTING PANIC SELL 🚨
@@ -491,7 +491,7 @@ MIT License
 
 ## 联系方式
 
-- **项目名称**: Lazarus Protocol
+- **项目名称**: Sentinel Protocol
 - **GitHub**: [仓库链接]
 - **演示视频**: [视频链接]
 
