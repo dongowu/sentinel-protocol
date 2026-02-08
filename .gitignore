@@ -1,11 +1,13 @@
 # Rust
 /target/
+**/target/
 **/*.rs.bk
 *.pdb
 Cargo.lock
 
 # Move
 /build/
+**/build/
 Move.lock
 
 # Go
