@@ -49,12 +49,12 @@ func main() {
 	}
 
 	if *sentinelBenchmark != "" {
-		enhancedConfig, err := loadEnhancedConfig(*configPath)
+		sentinelCfg, err := loadSentinelConfigOnly(*configPath)
 		if err != nil {
-			log.Fatalf("Failed to load enhanced config for benchmark: %v", err)
+			log.Fatalf("Failed to load sentinel config for benchmark: %v", err)
 		}
 
-		guard := NewSentinelGuard(enhancedConfig.Sentinel)
+		guard := NewSentinelGuard(sentinelCfg)
 		if guard == nil {
 			guard = NewSentinelGuard(&SentinelConfig{Enabled: true, RiskThreshold: 70, AuditLogPath: "./audit/sentinel-audit.jsonl"})
 		}
@@ -282,4 +282,20 @@ func saveConfig(path string, config Config) error {
 	}
 
 	return os.WriteFile(path, data, 0644)
+}
+
+func loadSentinelConfigOnly(path string) (*SentinelConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var raw struct {
+		Sentinel *SentinelConfig `json:"sentinel"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+
+	return raw.Sentinel, nil
 }
