@@ -1,297 +1,140 @@
-# Lazarus Protocol
+# Sentinel Protocol (OpenClaw x Sui)
 
-A decentralized "Dead Man's Switch" system built on Sui blockchain for the Sui Hackathon.
+Verifiable security layer for local autonomous agents.
 
-## 🎯 Overview
+This repository started as Lazarus Protocol and now includes Sentinel, a policy gate + audit anchoring workflow for OpenClaw and Sui.
 
-Lazarus Protocol enables secure digital inheritance through a dead man's switch mechanism. Users encrypt sensitive files locally, store them on Walrus Protocol (Sui's decentralized storage), and set up automated heartbeat monitoring. If heartbeats stop for 30 days, beneficiaries can access the encrypted data.
+## What This Project Does
 
-## 🏗️ Project Structure
+Sentinel adds a security control loop to agent execution:
 
-```
-lazarus-protocol/
-├── contract/              # Sui Move Smart Contract
-│   ├── sources/
-│   │   ├── lazarus_protocol.move
-│   │   └── sentinel_audit.move
-│   ├── Move.toml
-│   └── README.md
-│
-├── rustcli/              # Rust CLI Tool (Encryption & Storage)
-│   ├── src/
-│   │   └── main.rs
-│   ├── Cargo.toml
-│   └── README.md
-│
-├── goserver/             # Go Heartbeat Daemon
-│   ├── main.go
-│   ├── go.mod
-│   ├── config.example.json
-│   └── README.md
-│
-└── README.md            # This file
-```
+1. Detect risky prompts/actions (prompt injection, dangerous exec, wallet risk)
+2. Block or allow based on policy
+3. Record structured audit logs locally
+4. Anchor audit evidence on Sui for public verification
 
-## 🚀 Quick Start
+Core loop: **Detect -> Block -> Record -> Verify**
 
-### 1. Build the Rust CLI Tool
+## Architecture
+
+- `goserver/`: policy gate, benchmark runner, OpenClaw integration, Sui anchoring calls
+- `contract/`: Move modules (`lazarus_protocol.move`, `sentinel_audit.move`)
+- `rustcli/`: deterministic audit hashing/signing + legacy encryption/Walrus tooling
+
+## Quick Start
+
+### 1) Build tools
 
 ```bash
 cd rustcli
 cargo build --release
-cd ..
+cd ../goserver
+go build ./...
 ```
 
-### 2. Deploy the Smart Contract
+### 2) Build and publish Move package
 
 ```bash
-cd contract
+cd ../contract
 sui move build
 sui client publish --gas-budget 100000000
-# Save the package ID from output
-cd ..
 ```
 
-### 3. Create a Vault
+Save these from publish output:
+
+- `PackageID`
+- `RegistryID` (object type `sentinel_audit::Registry`)
+
+### 3) Configure Sentinel
+
+Edit `goserver/config.openclaw.json`:
+
+- `sentinel.anchor_enabled = true`
+- `sentinel.anchor_package = <PackageID>`
+- `sentinel.anchor_registry = <RegistryID>`
+
+Then set operator:
 
 ```bash
-cd goserver
-go build -o lazarus-daemon
-
-./lazarus-daemon --create \
-  --file /path/to/your/will.pdf \
-  --beneficiary 0xBENEFICIARY_ADDRESS \
-  --walrus https://publisher.walrus-testnet.walrus.space \
-  --epochs 5
+sui client call \
+  --package <PackageID> \
+  --module sentinel_audit \
+  --function set_operator \
+  --args <RegistryID> <YOUR_ADDRESS> \
+  --gas-budget 10000000
 ```
 
-**CRITICAL**: Save the `decryption_key` printed to console!
+### 4) Run benchmark
 
-### 4. Configure and Run Daemon
-
-Edit `config.json`:
-- Update `owner_address` with your Sui address
-- Update `package_id` with deployed contract package ID
-
-Run the daemon:
 ```bash
-./lazarus-daemon --config config.json
+cd ../goserver
+go run . --config config.openclaw.json --sentinel-benchmark benchmark_cases.example.json
 ```
 
-## 📦 Components
+## Verification Evidence (Hackathon)
 
-### Smart Contract (`contract/`)
+### A) Benchmark Result
 
-**Technology**: Sui Move
-**Purpose**: On-chain dead man's switch logic
+Current sample set result:
 
-- Vault creation with beneficiary designation
-- Heartbeat tracking (30-day threshold)
-- Will execution after threshold exceeded
-- Event emission for frontend indexing
+- `total=4`
+- `correct=4`
+- `accuracy=1.0`
+- `true_positive=2`
+- `false_positive=0`
+- `true_negative=2`
+- `false_negative=0`
 
-[View Contract Documentation](contract/README.md)
+> Add screenshot here:
 
-### Rust CLI Tool (`rustcli/`)
-
-**Technology**: Rust
-**Purpose**: Zero-knowledge encryption and storage
-
-- AES-256-GCM encryption with random keys
-- Walrus Protocol integration
-- SHA-256 checksums for integrity
-- JSON output for easy integration
-
-[View CLI Documentation](rustcli/README.md)
-
-### Go Daemon (`goserver/`)
-
-**Technology**: Go
-**Purpose**: Automated heartbeat service
-
-- Periodic heartbeat transactions (every 7 days)
-- Vault creation workflow
-- Configuration management
-- Graceful shutdown handling
-
-[View Daemon Documentation](goserver/README.md)
-
-## 🔄 System Workflow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     1. VAULT CREATION                        │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                    ┌──────────────────┐
-                    │   User's File    │
-                    │   (will.pdf)     │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │  Rust CLI Tool   │
-                    │  - Encrypt       │
-                    │  - Generate Key  │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Walrus Protocol  │
-                    │ (Encrypted Blob) │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │  Sui Blockchain  │
-                    │  (Vault Object)  │
-                    └────────┬─────────┘
-                             │
-┌─────────────────────────────────────────────────────────────┐
-│                   2. HEARTBEAT MONITORING                    │
-└─────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │   Go Daemon      │
-                    │  Every 7 days    │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │  keep_alive()    │
-                    │  Transaction     │
-                    └────────┬─────────┘
-                             │
-┌─────────────────────────────────────────────────────────────┐
-│              3. WILL EXECUTION (After 30 days)              │
-└─────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │  execute_will()  │
-                    │  (Anyone)        │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │  Event Emitted   │
-                    │  (blob_id)       │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │  Beneficiary     │
-                    │  - Get blob_id   │
-                    │  - Download blob │
-                    │  - Decrypt       │
-                    └──────────────────┘
+```markdown
+![Benchmark result](docs/images/benchmark-result.png)
 ```
 
-## 🔒 Security Features
+### B) On-chain Proof
 
-1. **Zero-Knowledge Encryption**: Decryption keys never leave local machine
-2. **Decentralized Storage**: No single point of failure
-3. **On-Chain Logic**: Transparent and auditable
-4. **Access Control**: Owner-only heartbeat enforcement
-5. **Event Logging**: All actions emit events for auditing
-6. **Sentinel Audit Anchoring**: OpenClaw security decisions can be hashed and anchored on Sui
+Reference values used in demo:
 
-## 🛠️ Technology Stack
+- `PackageID`: `0x350839c3f676f8f0f1c8e2a97401e9cfe63425599daa31d2f060e9461d309c2b`
+- `RegistryID`: `0x8a8aebd897753bfa384ff3341bec31d4051f95e0e870bdf2c06a4196fa08df60`
+- `record_audit tx digest`: `GXc1bZNEsd6rNR8wjum1MpwACX3VQMXVeNTvPKTckVvV`
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Smart Contract | Sui Move | On-chain logic & state |
-| Encryption | Rust (AES-256-GCM) | Zero-knowledge encryption |
-| Storage | Walrus Protocol | Decentralized blob storage |
-| Daemon | Go | Automated heartbeats |
-| Blockchain | Sui | Transaction execution |
+Query example:
 
-## 📋 Requirements
-
-- **Rust**: 1.70+ (for CLI tool)
-- **Go**: 1.21+ (for daemon)
-- **Sui CLI**: Latest version (for contract deployment)
-- **Walrus Access**: Testnet publisher URL
-
-## 🧪 Testing
-
-### Test Rust CLI
 ```bash
-cd rustcli
-cargo test
+sui client tx-block GXc1bZNEsd6rNR8wjum1MpwACX3VQMXVeNTvPKTckVvV --json
 ```
 
-### Test Smart Contract
-```bash
-cd contract
-sui move test
+Expected evidence: `sentinel_audit::AuditAnchoredEvent` with `action_tag`, `risk_score`, `blocked`.
+
+> Add screenshots here:
+
+```markdown
+![Tx digest proof](docs/images/tx-digest-proof.png)
+![AuditAnchoredEvent proof](docs/images/audit-event-proof.png)
 ```
 
-### Test Go Daemon
-```bash
-cd goserver
-go test ./...
-```
+## Demo Video
 
-## 📖 Documentation
+Recommended structure (90-140s):
 
-- [Smart Contract Documentation](contract/README.md)
-- [Rust CLI Documentation](rustcli/README.md)
-- [Go Daemon Documentation](goserver/README.md)
-- [System Overview](SYSTEM_OVERVIEW.md)
+1. Threat input
+2. Before (no gate) vs After (Sentinel)
+3. Benchmark metrics
+4. On-chain event proof
+5. Final takeaway
 
-## 🎓 Use Cases
+Suggested video file:
 
-1. **Digital Inheritance**: Pass cryptocurrency wallets to heirs
-2. **Emergency Access**: Backup recovery for critical systems
-3. **Business Continuity**: Ensure access to critical credentials
-4. **Personal Archives**: Secure time-capsule functionality
+- `sentinel-demo-single-paused-novoice-*.mp4` (raw)
+- edited version with overlays in CapCut
 
-## 🚧 Future Enhancements
+## Security Notes
 
-- [ ] Frontend web application
-- [ ] Mobile app for heartbeat management
-- [ ] Multi-signature support
-- [ ] Configurable threshold periods
-- [ ] Email/SMS notifications
-- [ ] Multiple beneficiaries
-- [ ] Partial data release (tiered access)
+- Do not use exposed seed phrases/keys from chats in real wallets.
+- Keep `sign_private_key` empty unless you explicitly need signing.
+- This is a hackathon prototype; review before production use.
 
-## 🤝 Contributing
+## License
 
-This project was built for the Sui Hackathon. Contributions welcome!
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## 📄 License
-
-MIT License - See LICENSE file for details
-
-## 🏆 Hackathon Submission
-
-**Built for**: Sui Hackathon 2026
-**Category**: DeFi / Infrastructure
-**Team**: Lazarus Protocol
-
-### Innovation Highlights
-
-- First dead man's switch implementation on Sui
-- Zero-knowledge encryption with decentralized storage
-- Seamless integration between Move, Rust, and Go
-- Production-ready code with comprehensive testing
-
-## 📞 Support
-
-For issues and questions:
-- Open an issue on GitHub
-- Check component-specific README files
-- Review the [System Overview](SYSTEM_OVERVIEW.md)
-
----
-
-**⚠️ IMPORTANT**: This is a hackathon project. Audit thoroughly before production use.
+MIT
