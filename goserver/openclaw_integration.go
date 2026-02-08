@@ -32,13 +32,15 @@ type OpenClawResponse struct {
 
 // OpenClawClient handles OpenClaw integration
 type OpenClawClient struct {
-	config *OpenClawConfig
+	config   *OpenClawConfig
+	sentinel *SentinelGuard
 }
 
 // NewOpenClawClient creates a new OpenClaw client
-func NewOpenClawClient(config *OpenClawConfig) *OpenClawClient {
+func NewOpenClawClient(config *OpenClawConfig, sentinel *SentinelGuard) *OpenClawClient {
 	return &OpenClawClient{
-		config: config,
+		config:   config,
+		sentinel: sentinel,
 	}
 }
 
@@ -111,6 +113,20 @@ func (oc *OpenClawClient) sendTask(actionType, prompt string) error {
 	log.Printf("   Action: %s", actionType)
 	log.Printf("   Server: %s", oc.config.ServerURL)
 	log.Println()
+
+	if oc.sentinel != nil {
+		eval, rec, err := oc.sentinel.Enforce(actionType, prompt)
+		if err != nil {
+			return fmt.Errorf("sentinel enforcement failed: %w", err)
+		}
+		log.Printf("   Sentinel score: %d (%v)", eval.Score, eval.Tags)
+		if rec.TxDigest != "" {
+			log.Printf("   Sui anchor tx: %s", rec.TxDigest)
+		}
+		if eval.ShouldBlock {
+			return fmt.Errorf("blocked by sentinel policy: %s", eval.Reason)
+		}
+	}
 
 	// Create request payload
 	payload := OpenClawRequest{

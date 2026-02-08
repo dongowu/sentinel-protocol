@@ -16,5 +16,14 @@
     "server_url": "http://localhost:8080",
     "wake_up_task": "Open the default browser and navigate to a page that plays an alarm sound. Display a large warning message: '⚠️ LAZARUS PROTOCOL WARNING ⚠️ - Confirm you are alive!' Play an alarm sound repeatedly until the user interacts with the page.",
     "last_words": "Open Twitter (X.com) and draft a tweet (DO NOT POST IT): 'This is an automated message from Sui-Lazarus Protocol. My owner has been inactive for 72 hours. The digital legacy protocol has been triggered. Goodbye, world. 🕯️ #Sui #LazarusProtocol'"
+  },
+  "sentinel": {
+    "enabled": true,
+    "risk_threshold": 70,
+    "audit_log_path": "./audit/sentinel-audit.jsonl",
+    "anchor_enabled": false,
+    "anchor_package": "0xYOUR_AUDIT_PACKAGE_ID",
+    "anchor_module": "sentinel_audit",
+    "anchor_function": "record_audit"
   }
 }

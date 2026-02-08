@@ -14,12 +14,12 @@ import (
 
 // Enhanced Config with activity monitoring settings
 type EnhancedConfig struct {
-	VaultID              string        `json:"vault_id"`
-	OwnerAddress         string        `json:"owner_address"`
-	HeartbeatInterval    time.Duration `json:"heartbeat_interval"`
-	SuiRPCURL            string        `json:"sui_rpc_url"`
-	PackageID            string        `json:"package_id"`
-	PrivateKey           string        `json:"private_key,omitempty"` // Optional, for SDK signing
+	VaultID           string        `json:"vault_id"`
+	OwnerAddress      string        `json:"owner_address"`
+	HeartbeatInterval time.Duration `json:"heartbeat_interval"`
+	SuiRPCURL         string        `json:"sui_rpc_url"`
+	PackageID         string        `json:"package_id"`
+	PrivateKey        string        `json:"private_key,omitempty"` // Optional, for SDK signing
 
 	// Activity monitoring settings
 	ActivityCheckInterval time.Duration `json:"activity_check_interval"` // How often to check activity (default: 1 minute)
@@ -27,10 +27,11 @@ type EnhancedConfig struct {
 	EmergencyThreshold    time.Duration `json:"emergency_threshold"`     // When to trigger emergency (default: 72 hours)
 
 	// Heartbeat strategy
-	SmartHeartbeat        bool          `json:"smart_heartbeat"`         // Only send heartbeat when active (default: true)
+	SmartHeartbeat bool `json:"smart_heartbeat"` // Only send heartbeat when active (default: true)
 
 	// OpenClaw integration
-	OpenClaw              *OpenClawConfig `json:"openclaw,omitempty"`
+	OpenClaw *OpenClawConfig `json:"openclaw,omitempty"`
+	Sentinel *SentinelConfig `json:"sentinel,omitempty"`
 }
 
 // DaemonState tracks the daemon's operational state
@@ -38,6 +39,7 @@ type DaemonState struct {
 	activityMonitor *ActivityMonitor
 	alertSystem     *AlertSystem
 	openClawClient  *OpenClawClient
+	sentinelGuard   *SentinelGuard
 	suiClient       interface{} // Placeholder, using CLI mode
 	config          *EnhancedConfig
 	lastHeartbeat   time.Time
@@ -98,10 +100,17 @@ func startEnhancedDaemon(config *EnhancedConfig) {
 	// Initialize alert system
 	alertSystem := NewAlertSystem(config)
 
+	// Initialize Sentinel guard (OpenClaw x Sui policy gate)
+	var sentinelGuard *SentinelGuard
+	if config.Sentinel != nil && config.Sentinel.Enabled {
+		sentinelGuard = NewSentinelGuard(config.Sentinel)
+		log.Printf("✓ Sentinel enabled (threshold=%d, audit=%s)", config.Sentinel.RiskThreshold, config.Sentinel.AuditLogPath)
+	}
+
 	// Initialize OpenClaw client
 	var openClawClient *OpenClawClient
 	if config.OpenClaw != nil && config.OpenClaw.Enabled {
-		openClawClient = NewOpenClawClient(config.OpenClaw)
+		openClawClient = NewOpenClawClient(config.OpenClaw, sentinelGuard)
 		if err := openClawClient.TestConnection(); err != nil {
 			log.Printf("⚠️  OpenClaw connection test failed: %v", err)
 			log.Println("   Continuing without OpenClaw integration")
@@ -115,6 +124,7 @@ func startEnhancedDaemon(config *EnhancedConfig) {
 		activityMonitor: activityMonitor,
 		alertSystem:     alertSystem,
 		openClawClient:  openClawClient,
+		sentinelGuard:   sentinelGuard,
 		suiClient:       nil, // Use CLI mode
 		config:          config,
 		lastHeartbeat:   time.Now(),
@@ -262,7 +272,7 @@ func handleMonitoringCycle(state *DaemonState) {
 			log.Println("  Will retry on next cycle")
 		} else {
 			state.lastHeartbeat = time.Now()
-			state.emergencyMode = false // Reset emergency mode on successful heartbeat
+			state.emergencyMode = false  // Reset emergency mode on successful heartbeat
 			state.alertTriggered = false // Reset alert flag
 		}
 	}
