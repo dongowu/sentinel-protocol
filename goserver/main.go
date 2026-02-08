@@ -14,20 +14,20 @@ import (
 
 // Config holds the daemon configuration
 type Config struct {
-	VaultID         string        `json:"vault_id"`
-	OwnerAddress    string        `json:"owner_address"`
+	VaultID           string        `json:"vault_id"`
+	OwnerAddress      string        `json:"owner_address"`
 	HeartbeatInterval time.Duration `json:"heartbeat_interval"`
-	SuiRPCURL       string        `json:"sui_rpc_url"`
-	PackageID       string        `json:"package_id"`
+	SuiRPCURL         string        `json:"sui_rpc_url"`
+	PackageID         string        `json:"package_id"`
 }
 
 // EncryptionResult represents the output from the Rust CLI tool
 type EncryptionResult struct {
-	BlobID         string `json:"blob_id"`
-	DecryptionKey  string `json:"decryption_key"`
-	Checksum       string `json:"checksum"`
-	OriginalSize   int    `json:"original_size"`
-	EncryptedSize  int    `json:"encrypted_size"`
+	BlobID        string `json:"blob_id"`
+	DecryptionKey string `json:"decryption_key"`
+	Checksum      string `json:"checksum"`
+	OriginalSize  int    `json:"original_size"`
+	EncryptedSize int    `json:"encrypted_size"`
 }
 
 func main() {
@@ -40,10 +40,28 @@ func main() {
 	epochs := flag.Int("epochs", 5, "Number of epochs to store on Walrus")
 	enhanced := flag.Bool("enhanced", false, "Use enhanced mode with activity monitoring")
 	useCLI := flag.Bool("use-cli", true, "Use Sui CLI instead of SDK (default: true)")
+	sentinelBenchmark := flag.String("sentinel-benchmark", "", "Path to Sentinel benchmark JSON file")
 	flag.Parse()
 
 	if *createVault {
 		handleCreateVault(*filePath, *beneficiary, *walrusURL, *epochs)
+		return
+	}
+
+	if *sentinelBenchmark != "" {
+		enhancedConfig, err := loadEnhancedConfig(*configPath)
+		if err != nil {
+			log.Fatalf("Failed to load enhanced config for benchmark: %v", err)
+		}
+
+		guard := NewSentinelGuard(enhancedConfig.Sentinel)
+		if guard == nil {
+			guard = NewSentinelGuard(&SentinelConfig{Enabled: true, RiskThreshold: 70, AuditLogPath: "./audit/sentinel-audit.jsonl"})
+		}
+
+		if err := RunSentinelBenchmark(*sentinelBenchmark, guard); err != nil {
+			log.Fatalf("Sentinel benchmark failed: %v", err)
+		}
 		return
 	}
 

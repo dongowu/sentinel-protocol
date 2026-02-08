@@ -150,6 +150,14 @@ Create `config.json`:
   --epochs 5
 ```
 
+### Run Sentinel Benchmark (for demo metrics)
+
+```bash
+./lazarus-daemon \
+  --config config.openclaw.json \
+  --sentinel-benchmark benchmark_cases.example.json
+```
+
 ## How It Works
 
 ### Smart Heartbeat Logic
