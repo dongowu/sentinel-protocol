@@ -1,14 +1,14 @@
 /// Sentinel Audit: policy-aware, on-chain audit anchoring for OpenClaw actions.
 ///
-/// The off-chain service computes deterministic record hashes for decisions and
-/// stores detailed payloads locally/Walrus. This module stores the governance
-/// state and emits verifiable anchor events.
+/// This version intentionally avoids dynamic fields to keep compatibility with
+/// older Sui toolchains used during hackathons.
 module lazarus_protocol::sentinel_audit {
     use sui::clock::{Self, Clock};
     use sui::event;
     use sui::object::{Self, UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use std::vector;
 
     /// Error: caller is not admin.
     const E_NOT_ADMIN: u64 = 1;
@@ -25,6 +25,7 @@ module lazarus_protocol::sentinel_audit {
         admin: address,
         policy_version: u64,
         policy_hash: address,
+        operators: vector<address>,
     }
 
     /// Event emitted whenever policy metadata changes.
@@ -52,19 +53,18 @@ module lazarus_protocol::sentinel_audit {
         timestamp_ms: u64,
     }
 
-    /// Dynamic field key for operator allowlist.
-    public struct OperatorKey has copy, drop, store {
-        value: address,
-    }
-
     /// Package init: creates shared registry with initial policy metadata.
     fun init(ctx: &mut TxContext) {
         let sender = tx_context::sender(ctx);
+        let mut operators = vector::empty<address>();
+        vector::push_back(&mut operators, sender);
+
         let registry = Registry {
             id: object::new(ctx),
             admin: sender,
             policy_version: 1,
             policy_hash: @0x0,
+            operators,
         };
         transfer::share_object(registry);
     }
@@ -98,14 +98,14 @@ module lazarus_protocol::sentinel_audit {
     ) {
         assert!(tx_context::sender(ctx) == registry.admin, E_NOT_ADMIN);
 
-        let key = OperatorKey { value: operator };
+        let (exists, idx) = find_operator(&registry.operators, operator);
         if (enabled) {
-            if (!sui::dynamic_field::exists_<OperatorKey>(&registry.id, key)) {
-                sui::dynamic_field::add(&mut registry.id, key, true);
+            if (!exists) {
+                vector::push_back(&mut registry.operators, operator);
             };
         } else {
-            if (sui::dynamic_field::exists_<OperatorKey>(&registry.id, key)) {
-                let _ = sui::dynamic_field::remove<OperatorKey, bool>(&mut registry.id, key);
+            if (exists) {
+                vector::remove(&mut registry.operators, idx);
             };
         };
 
@@ -162,6 +162,19 @@ module lazarus_protocol::sentinel_audit {
         if (operator == registry.admin) {
             return true
         };
-        sui::dynamic_field::exists_<OperatorKey>(&registry.id, OperatorKey { value: operator })
+        let (exists, _) = find_operator(&registry.operators, operator);
+        exists
+    }
+
+    fun find_operator(operators: &vector<address>, target: address): (bool, u64) {
+        let len = vector::length(operators);
+        let mut i = 0;
+        while (i < len) {
+            if (*vector::borrow(operators, i) == target) {
+                return (true, i)
+            };
+            i = i + 1;
+        };
+        (false, 0)
     }
 }
