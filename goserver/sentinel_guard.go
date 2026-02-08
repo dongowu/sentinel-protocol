@@ -106,7 +106,9 @@ func (sg *SentinelGuard) Evaluate(action, prompt string) RiskEvaluation {
 		score = 100
 	}
 
-	decision := score >= sg.cfg.RiskThreshold || containsTag(tags, "policy_bypass") || containsTag(tags, "wallet_risk")
+	hasPromptInjection := containsTag(tags, "prompt_injection")
+	hasDangerousExec := containsTag(tags, "dangerous_exec")
+	decision := score >= sg.cfg.RiskThreshold || containsTag(tags, "policy_bypass") || containsTag(tags, "wallet_risk") || (hasPromptInjection && hasDangerousExec)
 	reason := "no notable risk indicators"
 	if len(reasons) > 0 {
 		reason = strings.Join(reasons, "; ")
