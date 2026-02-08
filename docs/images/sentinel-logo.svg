@@ -1,0 +1,37 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1020"/>
+      <stop offset="100%" stop-color="#142B5A"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#28D5FF"/>
+      <stop offset="100%" stop-color="#2B7BFF"/>
+    </linearGradient>
+    <linearGradient id="chain" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7CFFB2"/>
+      <stop offset="100%" stop-color="#00D67D"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="180" fill="url(#bg)"/>
+
+  <path d="M512 180 L770 280 L730 610 C720 760 618 858 512 910 C406 858 304 760 294 610 L254 280 Z"
+        fill="url(#shield)" stroke="#D4F7FF" stroke-width="16"/>
+
+  <circle cx="512" cy="470" r="150" fill="#0D1A3A" stroke="#8EE7FF" stroke-width="10"/>
+
+  <g fill="none" stroke="url(#chain)" stroke-width="20" stroke-linecap="round">
+    <path d="M450 470 a42 42 0 0 1 42 -42 h42"/>
+    <path d="M574 470 a42 42 0 0 0 -42 42 h-42"/>
+    <line x1="492" y1="470" x2="532" y2="470"/>
+  </g>
+
+  <g fill="#DDF7FF">
+    <circle cx="468" cy="412" r="10"/>
+    <circle cx="556" cy="412" r="10"/>
+    <path d="M474 530 q38 34 76 0" stroke="#DDF7FF" stroke-width="10" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <text x="512" y="965" text-anchor="middle" fill="#DDF7FF" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700">SENTINEL</text>
+</svg>
