@@ -32,6 +32,7 @@ Thumbs.db
 *.pem
 .env
 secrets/
+goserver/config.openclaw.json
 
 # Temporary files
 *.tmp

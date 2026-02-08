@@ -5,12 +5,10 @@
   "sui_rpc_url": "https://fullnode.testnet.sui.io:443",
   "package_id": "0xYOUR_PACKAGE_ID_HERE",
   "private_key": "",
-
   "activity_check_interval": "10s",
   "inactivity_threshold": "2m",
   "emergency_threshold": "5m",
   "smart_heartbeat": true,
-
   "openclaw": {
     "enabled": true,
     "server_url": "http://localhost:8080",
