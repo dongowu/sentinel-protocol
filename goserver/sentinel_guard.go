@@ -57,7 +57,8 @@ type AuditRecord struct {
 
 // SentinelGuard evaluates risky inputs and writes tamper-evident audits.
 type SentinelGuard struct {
-	cfg SentinelConfig
+	cfg        SentinelConfig
+	policyGate *PolicyGate
 }
 
 func NewSentinelGuard(cfg *SentinelConfig) *SentinelGuard {
@@ -84,7 +85,10 @@ func NewSentinelGuard(cfg *SentinelConfig) *SentinelGuard {
 		copyCfg.SignCLIPath = copyCfg.HashCLIPath
 	}
 
-	return &SentinelGuard{cfg: copyCfg}
+	return &SentinelGuard{
+		cfg:        copyCfg,
+		policyGate: NewPolicyGate("sentinel-agent"),
+	}
 }
 
 func (sg *SentinelGuard) Evaluate(action, prompt string) RiskEvaluation {
@@ -115,13 +119,27 @@ func (sg *SentinelGuard) Evaluate(action, prompt string) RiskEvaluation {
 		add(25, "policy_bypass", "explicit security bypass attempt")
 	}
 
+	if sg.policyGate != nil {
+		pgResult := sg.policyGate.CheckCommand(prompt)
+		score = minInt(100, score+int(pgResult.RiskScore*100*0.4))
+		tags = append(tags, "behavioral_detection")
+		if pgResult.Action == "BLOCK" {
+			tags = append(tags, "behavior_block")
+			reasons = append(reasons, "behavioral policy gate blocked command")
+		} else if pgResult.Action == "REQUIRE_APPROVAL" {
+			tags = append(tags, "behavior_requires_approval")
+			reasons = append(reasons, "behavioral policy gate requires approval")
+		}
+	}
+
 	if score > 100 {
 		score = 100
 	}
 
 	hasPromptInjection := containsTag(tags, "prompt_injection")
 	hasDangerousExec := containsTag(tags, "dangerous_exec")
-	decision := score >= sg.cfg.RiskThreshold || containsTag(tags, "policy_bypass") || containsTag(tags, "wallet_risk") || (hasPromptInjection && hasDangerousExec)
+	hasBehaviorBlock := containsTag(tags, "behavior_block")
+	decision := score >= sg.cfg.RiskThreshold || containsTag(tags, "policy_bypass") || containsTag(tags, "wallet_risk") || hasBehaviorBlock || (hasPromptInjection && hasDangerousExec)
 	reason := "no notable risk indicators"
 	if len(reasons) > 0 {
 		reason = strings.Join(reasons, "; ")
@@ -368,4 +386,11 @@ func actionToTag(action string) int {
 	default:
 		return 9
 	}
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
