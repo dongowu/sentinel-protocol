@@ -175,10 +175,6 @@ func (sg *SentinelGuard) Enforce(action, prompt string) (RiskEvaluation, *AuditR
 		rec.PublicKey = signed.PublicKey
 	}
 
-	if err := sg.appendAudit(rec); err != nil {
-		return eval, rec, err
-	}
-
 	if sg.cfg.AnchorEnabled {
 		tx, err := sg.anchorToSui(rec)
 		if err != nil {
@@ -186,6 +182,10 @@ func (sg *SentinelGuard) Enforce(action, prompt string) (RiskEvaluation, *AuditR
 		} else {
 			rec.TxDigest = tx
 		}
+	}
+
+	if err := sg.appendAudit(rec); err != nil {
+		return eval, rec, err
 	}
 
 	return eval, rec, nil
@@ -261,13 +261,22 @@ func (sg *SentinelGuard) anchorToSui(rec *AuditRecord) (string, error) {
 		"--function", sg.cfg.AnchorFunc,
 		"--args", sg.cfg.AnchorRegistry, rec.RecordHash, fmt.Sprintf("%d", actionTag), fmt.Sprintf("%d", riskScore), blocked, "0x6",
 		"--gas-budget", "10000000",
+		"--json",
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("sui call failed: %v, output: %s", err, string(out))
 	}
 
-	// Keep extraction lightweight for hackathon use.
+	var parsed struct {
+		Effects struct {
+			TransactionDigest string `json:"transactionDigest"`
+		} `json:"effects"`
+	}
+	if err := json.Unmarshal(out, &parsed); err == nil && parsed.Effects.TransactionDigest != "" {
+		return parsed.Effects.TransactionDigest, nil
+	}
+
 	text := string(out)
 	if idx := strings.Index(text, "Transaction Digest:"); idx >= 0 {
 		line := strings.Split(text[idx:], "\n")[0]
