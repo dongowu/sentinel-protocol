@@ -37,6 +37,25 @@ enum Commands {
         epochs: u64,
     },
 
+    /// Download and decrypt a blob from Walrus Protocol
+    Decrypt {
+        /// Walrus blob ID
+        #[arg(long)]
+        blob_id: String,
+
+        /// Hex-encoded decryption key (key||nonce)
+        #[arg(long)]
+        decryption_key: String,
+
+        /// Walrus Publisher/Reader URL
+        #[arg(short, long)]
+        publisher: String,
+
+        /// Output file path for decrypted plaintext
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+
     /// Compute deterministic audit hash for Sentinel records
     HashAudit {
         #[arg(long)]
@@ -146,6 +165,14 @@ fn main() -> Result<()> {
         } => {
             encrypt_and_store(&file, &publisher, epochs)?;
         }
+        Commands::Decrypt {
+            blob_id,
+            decryption_key,
+            publisher,
+            output,
+        } => {
+            decrypt_blob(&blob_id, &decryption_key, &publisher, &output)?;
+        }
         Commands::HashAudit {
             action,
             prompt,
@@ -166,6 +193,89 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Download ciphertext from Walrus and decrypt to a local file.
+fn decrypt_blob(
+    blob_id: &str,
+    decryption_key: &str,
+    publisher_url: &str,
+    output: &PathBuf,
+) -> Result<()> {
+    eprintln!("[1/4] Downloading encrypted blob: {}", blob_id);
+    let ciphertext = download_from_walrus(blob_id, publisher_url)?;
+    eprintln!("       Ciphertext size: {} bytes", ciphertext.len());
+
+    eprintln!("[2/4] Decoding decryption key...");
+    let (key, nonce) = decode_decryption_key(decryption_key)?;
+
+    eprintln!("[3/4] Decrypting blob...");
+    let cipher = Aes256Gcm::new_from_slice(&key).context("Failed to create AES-256-GCM cipher")?;
+    let nonce_obj = Nonce::from_slice(&nonce);
+    let plaintext = cipher
+        .decrypt(nonce_obj, ciphertext.as_ref())
+        .map_err(|e| anyhow::anyhow!("Decryption failed: {}", e))?;
+
+    eprintln!("[4/4] Writing decrypted file: {}", output.display());
+    fs::write(output, &plaintext)
+        .with_context(|| format!("Failed to write decrypted output: {}", output.display()))?;
+
+    eprintln!("\n✓ Success! Blob decrypted to {}", output.display());
+    Ok(())
+}
+
+fn download_from_walrus(blob_id: &str, publisher_url: &str) -> Result<Vec<u8>> {
+    let runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(async { download_from_walrus_async(blob_id, publisher_url).await })
+}
+
+async fn download_from_walrus_async(blob_id: &str, publisher_url: &str) -> Result<Vec<u8>> {
+    let client = reqwest::Client::new();
+    let base = publisher_url.trim_end_matches('/');
+    let candidates = [
+        format!("{}/v1/{}", base, blob_id),
+        format!("{}/v1/blobs/{}", base, blob_id),
+    ];
+
+    let mut last_err = String::new();
+    for url in candidates {
+        let response = client.get(&url).send().await;
+        match response {
+            Ok(resp) if resp.status().is_success() => {
+                let bytes = resp
+                    .bytes()
+                    .await
+                    .with_context(|| format!("Failed reading response body from {}", url))?;
+                return Ok(bytes.to_vec());
+            }
+            Ok(resp) => {
+                last_err = format!("{} -> status {}", url, resp.status());
+            }
+            Err(e) => {
+                last_err = format!("{} -> {}", url, e);
+            }
+        }
+    }
+
+    anyhow::bail!(
+        "Failed to download blob {} from Walrus: {}",
+        blob_id,
+        last_err
+    )
+}
+
+fn decode_decryption_key(encoded: &str) -> Result<([u8; 32], [u8; 12])> {
+    let raw = hex::decode(encoded.trim_start_matches("0x"))
+        .context("decryption_key must be a hex string")?;
+    if raw.len() != 44 {
+        anyhow::bail!("decryption_key must be 44 bytes (88 hex chars)");
+    }
+
+    let mut key = [0u8; 32];
+    let mut nonce = [0u8; 12];
+    key.copy_from_slice(&raw[0..32]);
+    nonce.copy_from_slice(&raw[32..44]);
+    Ok((key, nonce))
 }
 
 /// Main encryption and storage workflow
@@ -408,5 +518,16 @@ mod tests {
 
         // Should be 88 hex characters (44 bytes * 2)
         assert_eq!(encoded.len(), 88);
+    }
+
+    #[test]
+    fn test_key_decoding_roundtrip() {
+        let key = [7u8; 32];
+        let nonce = [9u8; 12];
+        let encoded = encode_decryption_key(&key, &nonce);
+
+        let (decoded_key, decoded_nonce) = decode_decryption_key(&encoded).unwrap();
+        assert_eq!(decoded_key, key);
+        assert_eq!(decoded_nonce, nonce);
     }
 }

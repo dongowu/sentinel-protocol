@@ -40,6 +40,16 @@ lazarus-vault encrypt-and-store \
 - `--publisher` / `-p`: Walrus Publisher URL (required)
 - `--epochs` / `-e`: Number of epochs to store (default: 1)
 
+### Decrypt Blob
+
+```bash
+lazarus-vault decrypt \
+  --blob-id <walrus_blob_id> \
+  --decryption-key <88-char-hex-key> \
+  --publisher https://publisher.walrus-testnet.walrus.space \
+  --output ./decrypted_will.pdf
+```
+
 ### Hash Audit (Deterministic)
 
 ```bash
@@ -124,9 +134,10 @@ cargo test
 
 All tests should pass:
 ```
-running 3 tests
+running 4 tests
 test tests::test_checksum ... ok
 test tests::test_key_encoding ... ok
+test tests::test_key_decoding_roundtrip ... ok
 test tests::test_encryption_decryption ... ok
 ```
 
@@ -255,7 +266,7 @@ std::fs::write("decrypted_will.pdf", plaintext)?;
 
 ## Future Enhancements
 
-- [ ] Add decryption command
+- [x] Add decryption command
 - [ ] Support streaming for large files
 - [ ] Add progress bar for uploads
 - [ ] Implement retry logic for network failures
