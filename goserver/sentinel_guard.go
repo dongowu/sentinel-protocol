@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -190,6 +192,7 @@ func (sg *SentinelGuard) Enforce(action, prompt string) (RiskEvaluation, *AuditR
 		}
 		tx, err := anchor(rec)
 		if err != nil {
+			log.Printf("[ANCHOR] error: %v", err)
 			rec.AnchorError = err.Error()
 			if sg.cfg.AnchorFailClosed && !eval.ShouldBlock {
 				eval.ShouldBlock = true
@@ -292,13 +295,32 @@ func (sg *SentinelGuard) anchorToSui(rec *AuditRecord) (string, error) {
 		return "", fmt.Errorf("sui call failed: %v, output: %s", err, string(out))
 	}
 
-	var parsed struct {
+	// Strip non-JSON lines (e.g. "[warning] Client/Server api version mismatch...")
+	jsonBytes := out
+	if idx := bytes.IndexByte(out, '{'); idx > 0 {
+		jsonBytes = out[idx:]
+	}
+
+	// Try V2 format first (sui client >= 1.65): effects.V2.transaction_digest
+	var parsedV2 struct {
+		Effects struct {
+			V2 struct {
+				TransactionDigest string `json:"transaction_digest"`
+			} `json:"V2"`
+		} `json:"effects"`
+	}
+	if err := json.Unmarshal(jsonBytes, &parsedV2); err == nil && parsedV2.Effects.V2.TransactionDigest != "" {
+		return parsedV2.Effects.V2.TransactionDigest, nil
+	}
+
+	// Fallback: older format effects.transactionDigest
+	var parsedV1 struct {
 		Effects struct {
 			TransactionDigest string `json:"transactionDigest"`
 		} `json:"effects"`
 	}
-	if err := json.Unmarshal(out, &parsed); err == nil && parsed.Effects.TransactionDigest != "" {
-		return parsed.Effects.TransactionDigest, nil
+	if err := json.Unmarshal(jsonBytes, &parsedV1); err == nil && parsedV1.Effects.TransactionDigest != "" {
+		return parsedV1.Effects.TransactionDigest, nil
 	}
 
 	text := string(out)

@@ -273,6 +273,7 @@ func runSentinelProxyMode(configPath, listenAddr, walrusURL string) {
 	if guard == nil {
 		log.Fatalf("Sentinel guard is not configured")
 	}
+	log.Printf("  Anchor: enabled=%v package=%s registry=%s", guard.cfg.AnchorEnabled, guard.cfg.AnchorPackage, guard.cfg.AnchorRegistry)
 
 	var oc *OpenClawClient
 	if cfg.OpenClaw != nil && cfg.OpenClaw.Enabled {

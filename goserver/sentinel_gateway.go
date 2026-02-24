@@ -92,6 +92,8 @@ type GateResponse struct {
 	Token       *ExecuteToken `json:"token,omitempty"`
 	ChallengeID string        `json:"challenge_id,omitempty"`
 	ProofIndex  int           `json:"proof_index"`
+	TxDigest    string        `json:"tx_digest,omitempty"`
+	AnchorError string        `json:"anchor_error,omitempty"`
 }
 
 func (gw *SentinelGateway) handleGate(w http.ResponseWriter, r *http.Request) {
@@ -160,11 +162,13 @@ func (gw *SentinelGateway) handleGate(w http.ResponseWriter, r *http.Request) {
 
 	// 6) Build response based on evaluation
 	resp := GateResponse{
-		Score:      eval.Score,
-		Tags:       eval.Tags,
-		Reason:     eval.Reason,
-		RecordHash: rec.RecordHash,
-		ProofIndex: proofEntry.Index,
+		Score:       eval.Score,
+		Tags:        eval.Tags,
+		Reason:      eval.Reason,
+		RecordHash:  rec.RecordHash,
+		ProofIndex:  proofEntry.Index,
+		TxDigest:    rec.TxDigest,
+		AnchorError: rec.AnchorError,
 	}
 
 	if eval.ShouldBlock {

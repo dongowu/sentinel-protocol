@@ -47,3 +47,4 @@ docs/evidence/sentinel-benchmark-*.log
 
 # Demo runtime artifacts
 demo/
+openclaw-plugin/node_modules/
