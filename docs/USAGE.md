@@ -264,9 +264,16 @@ mkdir -p ~/.openclaw/extensions/sentinel-guard/hooks/sentinel-bootstrap
 }
 ```
 
-3. Create `~/.openclaw/extensions/sentinel-guard/index.ts` — the main plugin that registers `sentinel_gate`, `sentinel_status`, `sentinel_approval` tools and CLI commands. (See `goserver/` repo or ask the maintainer for the full source.)
+3. Copy plugin sources from this repo:
 
-4. Create `~/.openclaw/extensions/sentinel-guard/hooks/sentinel-bootstrap/HOOK.md` and `handler.ts` — the bootstrap hook that injects security rules into the agent's system prompt.
+```bash
+cp openclaw-plugin/index.ts ~/.openclaw/extensions/sentinel-guard/index.ts
+mkdir -p ~/.openclaw/extensions/sentinel-guard/hooks/sentinel-bootstrap
+cp openclaw-plugin/hooks/sentinel-bootstrap/HOOK.md ~/.openclaw/extensions/sentinel-guard/hooks/sentinel-bootstrap/HOOK.md
+cp openclaw-plugin/hooks/sentinel-bootstrap/handler.ts ~/.openclaw/extensions/sentinel-guard/hooks/sentinel-bootstrap/handler.ts
+```
+
+4. `index.ts` registers `sentinel_gate`, `sentinel_status`, `sentinel_approval` tools and CLI commands; bootstrap hook injects mandatory security rules into the agent prompt.
 
 5. Install dependencies and allow the tools:
 

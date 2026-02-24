@@ -1,36 +1,55 @@
-# Sentinel Protocol (OpenClaw x Sui)
+# Sentinel Protocol — Sui x OpenClaw
 
-Sentinel is a **verifiable runtime security layer** for Autonomous Agents. It intercepts high-risk actions **before** execution, enforces policy decisions, generates tamper-evident audit evidence, and anchors cryptographic proofs to the Sui blockchain.
+> **Track 1: Safety & Security** | Sui x OpenClaw Agent Hackathon
+
+Sentinel is a **verifiable pre-execution security layer** purpose-built for the **OpenClaw + Sui** stack. Every action an OpenClaw agent attempts is intercepted by Sentinel's policy gate, scored by a multi-signal risk engine, and — when blocked or approved — cryptographically anchored to the **Sui blockchain** as tamper-evident audit evidence.
+
+**OpenClaw** provides the agent runtime; **Sui** provides the trust anchor. Sentinel is the security bridge between them.
 
 ```
-Agent Action ─► Sentinel Gate ─► Risk Engine ─► Policy Decision
-                                                    │
-                    ┌───────────────────────────────┤
-                    ▼               ▼               ▼
-                  ALLOW      REQUIRE_APPROVAL     BLOCK
-                    │               │               │
-              Issue Token    Human Challenge    Hard Stop
-                    │               │               │
-                    └───────┬───────┘               │
-                            ▼                       ▼
-                     Proof Chain ◄──────────────────┘
-                            │
-                     Merkle Batch
-                            │
-                    ┌───────┴───────┐
-                    ▼               ▼
-               Walrus CID     Sui Anchor
+OpenClaw Agent ─► Sentinel Gate ─► Risk Engine ─► Policy Decision
+                                                       │
+                   ┌──────────────────────────────────┤
+                   ▼              ▼                   ▼
+                 ALLOW     REQUIRE_APPROVAL         BLOCK
+                   │              │                   │
+             Issue Token   Human Challenge        Hard Stop
+                   │              │                   │
+                   └──────┬──────┘                   │
+                          ▼                          ▼
+                   Proof Chain ◄─────────────────────┘
+                          │
+                   Merkle Batch
+                          │
+                   ┌──────┴──────┐
+                   ▼             ▼
+              Walrus CID    Sui Anchor
+                         (on-chain event)
 ```
 
-## Why This Project Fits the Hackathon
+## Why Sentinel Fits the Hackathon
 
 | What others do | What Sentinel does |
 |---|---|
-| Detection **advice** after the fact | **Pre-execution enforcement** with policy gate |
-| "Trust the logs" | **Verifiable evidence chain** (hash chain + Merkle root + Walrus CID + Sui anchor) |
+| Detection **advice** after the fact | **Pre-execution enforcement** via OpenClaw plugin |
+| "Trust the logs" | **Verifiable evidence chain** (hash chain + Merkle root + Walrus CID + **Sui on-chain anchor**) |
 | Static rule lists | **Rules + behavioral detection + semantic hook + human-in-the-loop** |
 | No replay protection | **One-time tokens** prevent action replay |
 | No emergency stop | **Kill switch** with manual arm + automatic consecutive-risk trigger |
+
+### Sui Integration Highlights
+
+- **4 Move modules** deployed on Sui testnet: `sentinel_audit`, `sentinel_audit_integration`, `community_rules`, `lazarus_protocol`
+- **On-chain audit anchoring**: every policy decision can be recorded as an immutable `AuditAnchoredEvent` on Sui
+- **Community governance**: on-chain rule voting registry with quorum-based approval/rejection
+- **Queryable events**: anchored records support post-incident forensics directly from Sui RPC
+
+### OpenClaw Integration Highlights
+
+- **Plugin with 3 agent tools**: `sentinel_gate`, `sentinel_status`, `sentinel_approval` — registered natively in the OpenClaw runtime
+- **Bootstrap hook**: automatically injects mandatory security rules into every agent session
+- **CLI commands**: `openclaw sentinel status`, `openclaw sentinel gate` for operator access
+- **Zero-config enforcement**: the agent cannot bypass the security gate because it's injected as a non-negotiable system policy
 
 ## Quick Start
 
@@ -38,8 +57,8 @@ Agent Action ─► Sentinel Gate ─► Risk Engine ─► Policy Decision
 
 - Go 1.21+
 - Rust / Cargo (for hash CLI)
-- Sui CLI (for on-chain anchoring, optional)
-- [OpenClaw](https://openclaw.ai) (for agent integration, optional)
+- Sui CLI (for on-chain anchoring)
+- [OpenClaw](https://openclaw.ai) (for agent integration)
 
 ### Build & Test
 
@@ -91,6 +110,12 @@ curl -s -X POST http://127.0.0.1:18080/sentinel/gate \
 flowchart TB
     H[Human Supervisor]
 
+    subgraph OC[OpenClaw Agent Runtime]
+      Agent[AI Agent]
+      Plugin[sentinel-guard plugin<br/>sentinel_gate / sentinel_status / sentinel_approval]
+      Hook[agent:bootstrap hook<br/>inject security rules into every session]
+    end
+
     subgraph CP[Sentinel Control Plane - Go]
       Gate[POST /sentinel/gate]
       Approval[POST /sentinel/approval/*]
@@ -103,25 +128,25 @@ flowchart TB
       Anchor[Sui Anchor Worker]
     end
 
-    subgraph OC[OpenClaw Agent Runtime]
-      Plugin[sentinel-guard plugin<br/>sentinel_gate / sentinel_status / sentinel_approval tools]
-      Hook[agent:bootstrap hook<br/>inject security rules]
-    end
-
     subgraph Chain[Sui Blockchain]
-      SA[sentinel_audit::record_audit]
+      SA[sentinel_audit::record_audit<br/>AuditAnchoredEvent]
+      CR[community_rules::vote_rule<br/>On-chain governance]
+      SAI[sentinel_audit_integration<br/>Enhanced audit queries]
     end
 
     W[(Walrus Storage)]
 
+    Agent --> Plugin
+    Hook -.->|inject rules| Agent
     H <-- approve/reject --> CP
     Plugin -- HTTP --> Gate
     Gate --> Risk --> Policy
     Policy --> Cap
     Policy --> Kill
     Policy --> Anchor --> SA
+    Anchor -.-> CR
+    Anchor -.-> SAI
     Gate --> Proof --> W
-    Hook -.-> Plugin
 ```
 
 ## Core Capabilities
@@ -137,7 +162,7 @@ flowchart TB
 | Proof Chain | Hash chain + Merkle root batching + Walrus CID publication | `sentinel_proof_chain.go` |
 | On-Chain Anchor | `sentinel_audit::record_audit` emits queryable events on Sui | `sentinel_audit.move` |
 | HTTP Gateway | 9 REST endpoints for full proxy operation | `sentinel_gateway_http.go` |
-| OpenClaw Plugin | 3 agent tools + bootstrap hook + CLI commands | `~/.openclaw/extensions/sentinel-guard/` |
+| OpenClaw Plugin | 3 agent tools + bootstrap hook + CLI commands | `openclaw-plugin/` |
 
 ## API Endpoints
 
@@ -155,21 +180,31 @@ flowchart TB
 
 ## OpenClaw Integration
 
-Sentinel integrates with [OpenClaw](https://openclaw.ai) via a **plugin** that registers agent tools:
+Sentinel is designed as a **native OpenClaw plugin**. It ships as a complete plugin package (`openclaw-plugin/`) that registers directly into the OpenClaw agent runtime:
 
-| Tool | Purpose |
+| Component | What it does |
 |---|---|
-| `sentinel_gate` | Agent calls this BEFORE any risky action (EXEC, WALLET, BROWSER, etc.) |
-| `sentinel_status` | Check system status (kill switch, proof chain, pending approvals) |
-| `sentinel_approval` | Approve or reject a pending challenge |
+| `sentinel_gate` tool | Agent calls this BEFORE any risky action (EXEC, WALLET, BROWSER, FS, NETWORK, CODE_EDITING). Returns ALLOW/BLOCK/REQUIRE_APPROVAL with one-time token. |
+| `sentinel_status` tool | Real-time system status — kill switch state, proof chain health, pending approvals |
+| `sentinel_approval` tool | Approve or reject pending human-in-the-loop challenges |
+| `agent:bootstrap` hook | **Automatically injects mandatory security rules** into every agent session. The agent cannot start without acknowledging Sentinel policy. |
+| `openclaw sentinel` CLI | Operator commands: `status`, `gate` — accessible from terminal |
+| `/sentinel` auto-reply | Quick status check without invoking AI |
 
-The plugin also ships a **bootstrap hook** that injects mandatory security rules into the agent's system prompt, instructing it to always call `sentinel_gate` before dangerous operations.
+### How It Works
+
+1. OpenClaw loads the `sentinel-guard` plugin at gateway startup
+2. The bootstrap hook injects `SENTINEL_GUARD.md` rules into the agent's system prompt
+3. Before any risky action, the agent **must** call `sentinel_gate` — this is enforced by the injected policy
+4. The gate evaluates risk via the Go control plane and returns a policy decision
+5. Every decision is hashed into the proof chain and can be anchored to Sui
 
 ```bash
-# Quick setup (if OpenClaw is installed)
+# Install plugin + start Sentinel proxy
+cp -r openclaw-plugin/ ~/.openclaw/extensions/sentinel-guard/
 cd goserver && go run . --config config.openclaw.json --sentinel-proxy --sentinel-proxy-addr 127.0.0.1:18080
 openclaw gateway restart  # picks up the plugin automatically
-openclaw sentinel status  # verify plugin is working
+openclaw sentinel status  # verify integration
 ```
 
 > Full setup guide: [docs/USAGE.md](docs/USAGE.md)
@@ -189,13 +224,21 @@ lazarus-protocol/
 │   ├── behavioral_detection.go   # Behavioral anomaly detection
 │   ├── openclaw_integration.go   # OpenClaw client (CLI + HTTP)
 │   └── config.openclaw.json      # Configuration
-├── contract/                     # Sui Move contracts
+├── openclaw-plugin/                 # OpenClaw plugin source (TypeScript)
+│   ├── index.ts                 # Plugin entry: 3 agent tools + CLI + auto-reply
+│   ├── openclaw.plugin.json     # Plugin manifest
+│   └── hooks/                   # agent:bootstrap hook (inject security rules)
+├── contract/                     # Sui Move contracts (4 modules, deployed on testnet)
 │   └── sources/
-│       ├── sentinel_audit.move   # On-chain audit anchor
-│       └── ...
+│       ├── sentinel_audit.move           # On-chain audit anchor (AuditAnchoredEvent)
+│       ├── sentinel_audit_integration.move # Enhanced audit with rule/anomaly queries
+│       ├── community_rules.move          # Decentralized rule governance
+│       └── lazarus_protocol.move         # Dead man's switch vault
 ├── rustcli/                      # Hash/proof CLI (Rust)
 │   └── src/main.rs               # hash-audit, sign-audit, encrypt-and-store, decrypt
 ├── docs/                         # Documentation
+│   ├── SUBMISSION.md             # Hackathon submission package (DeepSurge-ready)
+│   ├── PITCH_3MIN.md             # 3-minute pitch script for judge demo
 │   ├── USAGE.md                  # Full usage guide + OpenClaw integration
 │   ├── ARCHITECTURE.md           # System architecture + data flows
 │   ├── DEMO_RUNBOOK.md           # 5-min hackathon demo script
@@ -208,12 +251,22 @@ lazarus-protocol/
 ## Testing
 
 ```bash
+# Go server — 19 tests
 cd goserver
-
-# Run all 19 tests
 go test -count=1 ./...
 
-# Individual test paths
+# Move contracts — 3 tests
+cd ../contract
+sui move test
+
+# Rust CLI
+cd ../rustcli
+cargo test -q
+```
+
+### Individual Go Test Paths
+
+```bash
 go test -run TestSentinelProxyE2E ./...              # E2E: gate -> token -> execute -> replay blocked
 go test -run TestSentinelGatewayBlockFlow ./...       # Prompt injection -> hard BLOCK
 go test -run TestSentinelGatewayApprovalFlow ./...    # Wallet -> REQUIRE_APPROVAL -> approve -> token
@@ -223,7 +276,7 @@ go test -run TestCapabilitySandboxBlocks ./...         # Per-agent sandbox
 go test -run TestProofLatestEndpointReturnsLatestBatch ./... # Proof chain integrity
 ```
 
-## Testnet
+## Sui Testnet Deployment
 
 | Item | Value |
 |---|---|
@@ -232,10 +285,38 @@ go test -run TestProofLatestEndpointReturnsLatestBatch ./... # Proof chain integ
 | Audit Registry | `0xde4a42164d2ea5bfcdecdf8d3bc67b3fd5487dda8c67a26e09227a49d699641d` |
 | RPC | `https://fullnode.testnet.sui.io:443` |
 
+### Move Modules
+
+| Module | Purpose |
+|---|---|
+| `sentinel_audit` | On-chain audit anchoring — `record_audit` emits `AuditAnchoredEvent` with policy decision hash, risk score, and timestamp |
+| `sentinel_audit_integration` | Enhanced audit registry with per-rule and per-anomaly querying |
+| `community_rules` | Decentralized rule governance — submit, vote (for/against), quorum-based activation |
+| `lazarus_protocol` | Dead man's switch vault with heartbeat monitoring |
+
+### On-Chain Evidence
+
+```bash
+# Verified anchor transaction (testnet)
+sui client tx-block 8xQ7qp1TydrZrGCM3v7VkgYSKLCGU8Rp5Kkec9E3wxWm
+
+# Produce your own anchor tx
+sui client call \
+  --package 0x9ab7b272a0e6c959835ff29e3fdf050dc4c432f6794b8aa54533fefcad985eca \
+  --module sentinel_audit \
+  --function record_audit \
+  --args 0xde4a42164d2ea5bfcdecdf8d3bc67b3fd5487dda8c67a26e09227a49d699641d \
+         0x1111111111111111111111111111111111111111111111111111111111111111 \
+         1 92 true 0x6 \
+  --gas-budget 10000000
+```
+
 ## Documentation
 
 | Document | Content |
 |---|---|
+| [docs/SUBMISSION.md](docs/SUBMISSION.md) | Submission package: eligibility mapping, evidence checklist, DeepSurge metadata fields |
+| [docs/PITCH_3MIN.md](docs/PITCH_3MIN.md) | Time-boxed 3-minute pitch + demo narration |
 | [docs/USAGE.md](docs/USAGE.md) | Full usage guide, all run modes, OpenClaw integration setup |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layered architecture, data flows, module-to-code mapping |
 | [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md) | 5-min live demo with curl commands |

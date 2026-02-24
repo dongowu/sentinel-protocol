@@ -2,7 +2,6 @@
 module lazarus_protocol::sentinel_audit_integration {
     use std::string;
     use std::string::String;
-    use std::vector;
 
     public struct EnhancedAuditRecord has store, copy, drop {
         id: u64,
@@ -32,7 +31,7 @@ module lazarus_protocol::sentinel_audit_integration {
         sui::transfer::share_object(registry);
     }
 
-    public entry fun record_audit_with_rules(
+    public fun record_audit_with_rules(
         registry: &mut AuditRegistry,
         action_tag: String,
         risk_score: u8,
@@ -61,11 +60,12 @@ module lazarus_protocol::sentinel_audit_integration {
         });
     }
 
-    public entry fun record_rule_match(
+    public fun record_rule_match(
         registry: &mut AuditRegistry,
         rule_id: u64,
         _command_hash: vector<u8>,
         risk_score: u8,
+        blocked: bool,
         action: String,
         ctx: &mut sui::tx_context::TxContext,
     ) {
@@ -73,7 +73,7 @@ module lazarus_protocol::sentinel_audit_integration {
             registry,
             action,
             risk_score,
-            false,
+            blocked,
             rule_id,
             string::utf8(b"RULE_MATCH"),
             0,
@@ -81,7 +81,7 @@ module lazarus_protocol::sentinel_audit_integration {
         );
     }
 
-    public entry fun record_behavioral_anomaly(
+    public fun record_behavioral_anomaly(
         registry: &mut AuditRegistry,
         anomaly_type: String,
         anomaly_score: u8,
@@ -147,5 +147,56 @@ module lazarus_protocol::sentinel_audit_integration {
             i = i + 1;
         };
         out
+    }
+
+    #[test]
+    fun test_rule_and_anomaly_records_update_stats() {
+        let ctx = &mut sui::tx_context::new_from_hint(@0xA, 1, 0, 0, 0);
+        let mut registry = AuditRegistry {
+            id: sui::object::new(ctx),
+            records: vector::empty<EnhancedAuditRecord>(),
+            next_record_id: 1,
+            total_blocked: 0,
+        };
+
+        record_rule_match(
+            &mut registry,
+            7,
+            vector::empty<u8>(),
+            35,
+            false,
+            string::utf8(b"EXEC"),
+            ctx,
+        );
+        record_behavioral_anomaly(
+            &mut registry,
+            string::utf8(b"UNUSUAL_WALLET"),
+            90,
+            95,
+            true,
+            ctx,
+        );
+
+        let (total, blocked, block_rate) = get_audit_stats(&registry);
+        assert!(total == 2, 0);
+        assert!(blocked == 1, 1);
+        assert!(block_rate == 50, 2);
+
+        let (matched, blocked_by_rule) = query_records_by_rule(&registry, 7);
+        assert!(matched == 1, 3);
+        assert!(blocked_by_rule == 0, 4);
+
+        let recent = get_recent_records(&registry, 2);
+        assert!(vector::length(&recent) == 2, 5);
+        assert!(*vector::borrow(&recent, 0) == 2, 6);
+        assert!(*vector::borrow(&recent, 1) == 1, 7);
+
+        let AuditRegistry {
+            id,
+            records: _,
+            next_record_id: _,
+            total_blocked: _,
+        } = registry;
+        sui::object::delete(id);
     }
 }

@@ -1,80 +1,51 @@
-# Sentinel Protocol - Sui Smart Contract
+# Sentinel Protocol - Sui Move Package
 
-Dead man's switch implementation on Sui blockchain using Move language.
+Sui Move package for Sentinel Protocol (OpenClaw x Sui), focused on **on-chain security audit anchoring** for autonomous-agent runtime decisions.
 
-## Overview
+## Hackathon Focus (Track 1: Safety & Security)
 
-This smart contract implements a vault system where:
-- Owner must send periodic heartbeats (every 30 days)
-- If heartbeat threshold is exceeded, anyone can execute the will
-- Beneficiary receives access to encrypted data stored on Walrus
+This package provides the on-chain components used by Sentinel to make security decisions auditable:
 
-## Contract Structure
+- `sentinel_audit.move`: canonical audit registry + operator policy + `record_audit`
+- `sentinel_audit_integration.move`: enhanced record model for rule/anomaly dimensions
+- `community_rules.move`: governance-style community rule submission/voting
 
-### Vault Object
+A legacy module `lazarus_protocol.move` is still included for backward compatibility but is **not** the primary hackathon path.
 
-```move
-public struct Vault has key, store {
-    id: UID,
-    owner: address,
-    beneficiary: address,
-    encrypted_blob_id: String,
-    last_heartbeat_ms: u64,
-    is_executed: bool,
-}
-```
+## Modules
 
-### Entry Functions
+### 1) `sentinel_audit` (primary)
 
-#### `create_vault`
-Creates a new vault with beneficiary and encrypted blob ID.
+**Purpose:** Anchor runtime policy decisions on-chain.
 
-```move
-public entry fun create_vault(
-    beneficiary: address,
-    encrypted_blob_id: String,
-    clock: &Clock,
-    ctx: &mut TxContext
-)
-```
+**Core objects/events:**
+- `Registry` (shared): admin, operator, policy version/hash
+- `PolicyUpdatedEvent`
+- `OperatorUpdatedEvent`
+- `AuditAnchoredEvent`
 
-#### `keep_alive`
-Updates heartbeat timestamp. Owner-only function.
+**Core functions:**
+- `update_policy(registry, version, hash, ctx)`
+- `set_operator(registry, operator, ctx)`
+- `record_audit(registry, record_hash, action_tag, risk_score, blocked, clock, ctx)`
 
-```move
-public entry fun keep_alive(
-    vault: &mut Vault,
-    clock: &Clock,
-    ctx: &mut TxContext
-)
-```
+### 2) `sentinel_audit_integration`
 
-#### `execute_will`
-Executes the will after 30-day threshold. Callable by anyone.
+**Purpose:** Keep richer dimensions for analytics/testing (rule id, anomaly metadata, block rate).
 
-```move
-public entry fun execute_will(
-    vault: &mut Vault,
-    clock: &Clock,
-    ctx: &mut TxContext
-)
-```
+### 3) `community_rules`
 
-### Events
+**Purpose:** Community-managed rule lifecycle and voting logic for future policy governance.
 
-- `VaultCreatedEvent`: Emitted when vault is created
-- `HeartbeatEvent`: Emitted on each heartbeat
-- `WillExecutedEvent`: Emitted when will is executed
+### 4) `lazarus_protocol` (legacy)
 
-## Building
+Legacy dead-man-switch module retained for compatibility with earlier project stage.
+
+## Build & Test
 
 ```bash
+# from contract/
 sui move build
-```
-
-## Testing
-
-```bash
 sui move test
 ```
 
@@ -86,65 +57,12 @@ sui move test
 sui client publish --gas-budget 100000000
 ```
 
-Save the package ID from the output for use in the Go daemon.
+Save the package ID and registry object ID from publish output.
 
-### Mainnet
+## Setup Flow for Sentinel Audit
 
-```bash
-sui client publish --gas-budget 100000000 --network mainnet
-```
-
-## Usage Examples
-
-### Create a Vault
-
-```bash
-sui client call \
-  --package $PACKAGE_ID \
-  --module lazarus_protocol \
-  --function create_vault \
-  --args $BENEFICIARY_ADDRESS $BLOB_ID 0x6 \
-  --gas-budget 10000000
-```
-
-Note: `0x6` is the shared Clock object on Sui.
-
-### Send Heartbeat
-
-```bash
-sui client call \
-  --package $PACKAGE_ID \
-  --module lazarus_protocol \
-  --function keep_alive \
-  --args $VAULT_ID 0x6 \
-  --gas-budget 10000000
-```
-
-### Execute Will
-
-```bash
-sui client call \
-  --package $PACKAGE_ID \
-  --module lazarus_protocol \
-  --function execute_will \
-  --args $VAULT_ID 0x6 \
-  --gas-budget 10000000
-```
-
-## Sentinel Audit Module (OpenClaw x Sui)
-
-The package also includes `sentinel_audit.move` for policy-aware security anchoring.
-
-### Core Objects
-
-- `Registry` (shared): admin, operator allowlist, policy version/hash
-- `AuditAnchoredEvent`: emits hash + risk + policy version + timestamp
-
-### Setup Flow
-
-1. Publish package (runs `init`, creates shared `Registry` object)
-2. Save the `Registry` object ID from publish output
-3. Grant your service wallet as operator
+1. Publish package (creates shared `Registry` in `init`)
+2. Grant service wallet as operator
 
 ```bash
 sui client call \
@@ -155,7 +73,7 @@ sui client call \
   --gas-budget 10000000
 ```
 
-4. (Optional) version your policy hash on-chain
+3. (Optional) update policy version/hash
 
 ```bash
 sui client call \
@@ -166,7 +84,7 @@ sui client call \
   --gas-budget 10000000
 ```
 
-5. Anchor one audit decision
+4. Anchor one audit decision
 
 ```bash
 sui client call \
@@ -177,59 +95,21 @@ sui client call \
   --gas-budget 10000000
 ```
 
-## View Functions
+## Verification Checklist
 
-Query vault state:
+- `sui move test` passes
+- `record_audit` tx succeeds on testnet
+- Anchored event can be queried from tx digest
+- Off-chain `record_hash` equals local recomputed hash from audit log
 
-```bash
-sui client object $VAULT_ID
-```
+## Security Notes
 
-Or use the view functions in your application:
-- `get_owner(vault: &Vault): address`
-- `get_beneficiary(vault: &Vault): address`
-- `get_encrypted_blob_id(vault: &Vault): String`
-- `get_last_heartbeat_ms(vault: &Vault): u64`
-- `is_executed(vault: &Vault): bool`
-- `can_execute(vault: &Vault, clock: &Clock): bool`
+- Only admin can change policy metadata and operator permissions
+- `record_audit` is restricted to admin/operator
+- Chain events provide immutable audit trail for incident review
 
-## Security Features
+## Related Docs
 
-1. **Access Control**: Only owner can send heartbeats
-2. **Threshold Enforcement**: 30-day minimum before execution
-3. **Execution Lock**: Vault can only be executed once
-4. **Event Logging**: All actions emit events for auditing
-
-## Constants
-
-- `HEARTBEAT_THRESHOLD_MS`: 2592000000 (30 days in milliseconds)
-
-To modify the threshold, edit the constant in `sources/lazarus_protocol.move` and redeploy.
-
-## Integration
-
-### With Go Daemon
-
-The Go daemon automatically calls `keep_alive` every 7 days.
-
-### With Frontend
-
-Use Sui TypeScript SDK to:
-1. Query vault state
-2. Display countdown to execution
-3. Allow beneficiary to execute will
-4. Retrieve encrypted blob ID from events
-
-## Upgrading
-
-To upgrade the contract:
-
-```bash
-sui client upgrade --gas-budget 100000000
-```
-
-Note: Ensure upgrade policies are set correctly to allow upgrades.
-
-## License
-
-MIT License - Built for Sui Hackathon
+- `../README.md` - full Sentinel architecture and runtime controls
+- `../docs/DEMO_RUNBOOK.md` - end-to-end demo script
+- `../docs/SECURITY_WORKFLOWS.md` - air-gap + evidence verification scripts

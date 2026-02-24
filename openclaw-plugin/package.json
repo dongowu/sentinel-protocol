@@ -1,0 +1,12 @@
+{
+  "name": "sentinel-guard",
+  "version": "1.0.0",
+  "description": "Sentinel Guard — Verifiable runtime security layer for OpenClaw agents",
+  "main": "index.ts",
+  "openclaw": {
+    "extensions": ["./index.ts"]
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.32.0"
+  }
+}

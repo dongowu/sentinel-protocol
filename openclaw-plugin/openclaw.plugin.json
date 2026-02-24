@@ -1,0 +1,23 @@
+{
+  "id": "sentinel-guard",
+  "name": "Sentinel Guard",
+  "version": "1.0.0",
+  "description": "Verifiable runtime security layer for autonomous agents. Intercepts high-risk actions, enforces policy decisions, and anchors audit proofs to Sui blockchain.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "sentinelUrl": {
+        "type": "string",
+        "default": "http://127.0.0.1:18080",
+        "description": "URL of the Sentinel proxy server"
+      }
+    }
+  },
+  "uiHints": {
+    "sentinelUrl": {
+      "label": "Sentinel Proxy URL",
+      "placeholder": "http://127.0.0.1:18080"
+    }
+  }
+}
