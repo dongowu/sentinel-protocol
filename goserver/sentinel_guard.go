@@ -20,11 +20,12 @@ type SentinelConfig struct {
 	AuditLogPath  string `json:"audit_log_path"`
 
 	// Optional on-chain anchor fields. Keep them configurable to work with different Move modules.
-	AnchorEnabled  bool   `json:"anchor_enabled"`
-	AnchorPackage  string `json:"anchor_package"`
-	AnchorModule   string `json:"anchor_module"`
-	AnchorFunc     string `json:"anchor_function"`
-	AnchorRegistry string `json:"anchor_registry"`
+	AnchorEnabled    bool   `json:"anchor_enabled"`
+	AnchorFailClosed bool   `json:"anchor_fail_closed"`
+	AnchorPackage    string `json:"anchor_package"`
+	AnchorModule     string `json:"anchor_module"`
+	AnchorFunc       string `json:"anchor_function"`
+	AnchorRegistry   string `json:"anchor_registry"`
 
 	HashCLIPath string `json:"hash_cli_path"`
 	SignCLIPath string `json:"sign_cli_path"`
@@ -59,6 +60,7 @@ type AuditRecord struct {
 type SentinelGuard struct {
 	cfg        SentinelConfig
 	policyGate *PolicyGate
+	anchorFn   func(*AuditRecord) (string, error)
 }
 
 func NewSentinelGuard(cfg *SentinelConfig) *SentinelGuard {
@@ -169,16 +171,38 @@ func (sg *SentinelGuard) Enforce(action, prompt string) (RiskEvaluation, *AuditR
 		rec.Decision = "allowed"
 	}
 
-	rec.RecordHash = sg.computeHash(rec)
-	if signed, err := sg.signHash(rec.RecordHash); err == nil {
-		rec.Signature = signed.Signature
-		rec.PublicKey = signed.PublicKey
+	materializeRecord := func() {
+		rec.RecordHash = sg.computeHash(rec)
+		rec.Signature = ""
+		rec.PublicKey = ""
+		if signed, err := sg.signHash(rec.RecordHash); err == nil {
+			rec.Signature = signed.Signature
+			rec.PublicKey = signed.PublicKey
+		}
 	}
 
+	materializeRecord()
+
 	if sg.cfg.AnchorEnabled {
-		tx, err := sg.anchorToSui(rec)
+		anchor := sg.anchorToSui
+		if sg.anchorFn != nil {
+			anchor = sg.anchorFn
+		}
+		tx, err := anchor(rec)
 		if err != nil {
 			rec.AnchorError = err.Error()
+			if sg.cfg.AnchorFailClosed && !eval.ShouldBlock {
+				eval.ShouldBlock = true
+				eval.Score = maxInt(eval.Score, sg.cfg.RiskThreshold)
+				eval.Tags = dedupe(append(eval.Tags, "anchor_failure"))
+				eval.Reason = eval.Reason + "; on-chain anchor failed (fail-closed)"
+
+				rec.Score = eval.Score
+				rec.Tags = eval.Tags
+				rec.Reason = eval.Reason
+				rec.Decision = "blocked"
+				materializeRecord()
+			}
 		} else {
 			rec.TxDigest = tx
 		}
@@ -399,6 +423,13 @@ func actionToTag(action string) int {
 
 func minInt(a, b int) int {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
 		return a
 	}
 	return b

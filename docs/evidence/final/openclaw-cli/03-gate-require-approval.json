@@ -1,0 +1,13 @@
+{
+  "decision": "REQUIRE_APPROVAL",
+  "score": 70,
+  "tags": [
+    "wallet_risk",
+    "behavioral_detection",
+    "behavior_block"
+  ],
+  "reason": "wallet/credential operation requested; behavioral policy gate blocked command",
+  "record_hash": "0x70e8fd91e919dad359e37628a71a7decbb2b808008ed660da49698fbeaabc781",
+  "challenge_id": "challenge-1771932118818-9w3k",
+  "proof_index": 12
+}

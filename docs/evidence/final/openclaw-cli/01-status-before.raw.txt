@@ -1,0 +1,31 @@
+Config warnings:\n- plugins.entries.feishu: plugin feishu: duplicate plugin id detected; later plugin may be overridden (/Users/dongowu/.openclaw/lib/node_modules/openclaw/extensions/feishu/index.ts)
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 2026.2.2.
+[plugins] feishu failed to load from /Users/dongowu/.openclaw/extensions/feishu/index.ts: Error: Cannot find module 'zod'
+Require stack:
+- /Users/dongowu/.openclaw/extensions/feishu/src/config-schema.ts
+[plugins] Sentinel Guard plugin loaded
+Config warnings:\n- plugins.entries.feishu: plugin feishu: duplicate plugin id detected; later plugin may be overridden (/Users/dongowu/.openclaw/lib/node_modules/openclaw/extensions/feishu/index.ts)
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 0.0.0.
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 2026.2.2.
+│
+◇  Config warnings ────────────────────────────────────────────────────────╮
+│                                                                          │
+│  - plugins.entries.feishu: plugin feishu: duplicate plugin id detected;  │
+│    later plugin may be overridden                                        │
+│    (/Users/dongowu/.openclaw/lib/node_modules/openclaw/extensions/feish  │
+│    u/index.ts)                                                           │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────╯
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 2026.2.2.
+{
+  "kill_switch": {
+    "armed": false,
+    "armed_at": "0001-01-01T00:00:00Z",
+    "consecutive_high_risk": 0,
+    "threshold": 3
+  },
+  "pending_approvals": 0,
+  "pending_tokens": 0,
+  "proof_chain_length": 11,
+  "proof_chain_valid": true
+}

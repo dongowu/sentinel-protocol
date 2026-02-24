@@ -1,0 +1,12 @@
+{
+  "kill_switch": {
+    "armed": false,
+    "armed_at": "0001-01-01T00:00:00Z",
+    "consecutive_high_risk": 0,
+    "threshold": 3
+  },
+  "pending_approvals": 0,
+  "pending_tokens": 1,
+  "proof_chain_length": 13,
+  "proof_chain_valid": true
+}

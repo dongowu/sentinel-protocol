@@ -3,7 +3,6 @@
 **/target/
 **/*.rs.bk
 *.pdb
-Cargo.lock
 
 # Move
 /build/
@@ -35,10 +34,16 @@ Thumbs.db
 .env
 secrets/
 goserver/config.openclaw.json
+goserver/configs/config.openclaw.json
 
-# Temporary files
+# Temporary / generated
 *.tmp
 *.log
+docs/evidence/verify-*.log
+docs/evidence/sentinel-benchmark-*.log
 
-# Local Codex worktrees
+# Local worktrees
 .worktrees/
+
+# Demo runtime artifacts
+demo/

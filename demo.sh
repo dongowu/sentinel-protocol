@@ -14,10 +14,10 @@ echo "[3/4] Rust tests"
 ( cd "$ROOT_DIR/rustcli" && cargo test --all >/dev/null )
 
 echo "[4/4] Sentinel benchmark (sample)"
-if [ -f "$ROOT_DIR/goserver/benchmark_cases.example.json" ]; then
-  ( cd "$ROOT_DIR/goserver" && go run . --config config.openclaw.example.json --sentinel-benchmark benchmark_cases.example.json )
+if [ -f "$ROOT_DIR/goserver/testdata/benchmark_cases.example.json" ]; then
+  ( cd "$ROOT_DIR/goserver" && go run . --config configs/config.openclaw.example.json --sentinel-benchmark testdata/benchmark_cases.example.json )
 else
-  echo "benchmark_cases.example.json not found, skip"
+  echo "testdata/benchmark_cases.example.json not found, skip"
 fi
 
 echo "Demo complete."

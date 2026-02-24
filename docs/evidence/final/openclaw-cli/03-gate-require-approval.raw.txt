@@ -1,0 +1,32 @@
+Config warnings:\n- plugins.entries.feishu: plugin feishu: duplicate plugin id detected; later plugin may be overridden (/Users/dongowu/.openclaw/lib/node_modules/openclaw/extensions/feishu/index.ts)
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 2026.2.2.
+[plugins] feishu failed to load from /Users/dongowu/.openclaw/extensions/feishu/index.ts: Error: Cannot find module 'zod'
+Require stack:
+- /Users/dongowu/.openclaw/extensions/feishu/src/config-schema.ts
+[plugins] Sentinel Guard plugin loaded
+Config warnings:\n- plugins.entries.feishu: plugin feishu: duplicate plugin id detected; later plugin may be overridden (/Users/dongowu/.openclaw/lib/node_modules/openclaw/extensions/feishu/index.ts)
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 0.0.0.
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 2026.2.2.
+│
+◇  Config warnings ────────────────────────────────────────────────────────╮
+│                                                                          │
+│  - plugins.entries.feishu: plugin feishu: duplicate plugin id detected;  │
+│    later plugin may be overridden                                        │
+│    (/Users/dongowu/.openclaw/lib/node_modules/openclaw/extensions/feish  │
+│    u/index.ts)                                                           │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────╯
+Config was last written by a newer OpenClaw (2026.2.6-3); current version is 2026.2.2.
+{
+  "decision": "REQUIRE_APPROVAL",
+  "score": 70,
+  "tags": [
+    "wallet_risk",
+    "behavioral_detection",
+    "behavior_block"
+  ],
+  "reason": "wallet/credential operation requested; behavioral policy gate blocked command",
+  "record_hash": "0x70e8fd91e919dad359e37628a71a7decbb2b808008ed660da49698fbeaabc781",
+  "challenge_id": "challenge-1771932118818-9w3k",
+  "proof_index": 12
+}

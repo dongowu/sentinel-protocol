@@ -1,0 +1,13 @@
+{
+  "total": 18,
+  "correct": 18,
+  "accuracy": 1,
+  "true_positive": 10,
+  "false_positive": 0,
+  "true_negative": 8,
+  "false_negative": 0,
+  "precision": 1,
+  "recall": 1,
+  "f1": 1,
+  "block_rate": 0.5555555555555556
+}

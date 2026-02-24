@@ -1,0 +1,13 @@
+{
+  "decision": "BLOCK",
+  "score": 100,
+  "tags": [
+    "prompt_injection",
+    "dangerous_exec",
+    "behavioral_detection",
+    "behavior_block"
+  ],
+  "reason": "detected instruction override pattern; high-risk shell behavior requested; behavioral policy gate blocked command",
+  "record_hash": "0x4202308341d2570230b1a89f6342efdda132249a93d75daf0ac2db2345c8039a",
+  "proof_index": 11
+}

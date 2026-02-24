@@ -11,11 +11,11 @@ import (
 
 // SentinelGatewayConfig configures the gateway layer.
 type SentinelGatewayConfig struct {
-	ApprovalTimeout    time.Duration `json:"approval_timeout"`
-	ProofBatchSize     int           `json:"proof_batch_size"`
-	WalrusPublisherURL string        `json:"walrus_publisher_url"`
-	KillSwitchThreshold int          `json:"kill_switch_threshold"`
-	ExecuteTokenTTL    time.Duration `json:"execute_token_ttl"`
+	ApprovalTimeout     time.Duration `json:"approval_timeout"`
+	ProofBatchSize      int           `json:"proof_batch_size"`
+	WalrusPublisherURL  string        `json:"walrus_publisher_url"`
+	KillSwitchThreshold int           `json:"kill_switch_threshold"`
+	ExecuteTokenTTL     time.Duration `json:"execute_token_ttl"`
 }
 
 // SentinelGateway wires all Sentinel components behind an HTTP API.
@@ -171,8 +171,9 @@ func (gw *SentinelGateway) handleGate(w http.ResponseWriter, r *http.Request) {
 		// Determine BLOCK vs REQUIRE_APPROVAL
 		hasInjection := containsTag(eval.Tags, "prompt_injection")
 		hasBypass := containsTag(eval.Tags, "policy_bypass")
+		hasAnchorFailure := containsTag(eval.Tags, "anchor_failure")
 
-		if hasInjection || hasBypass {
+		if hasInjection || hasBypass || hasAnchorFailure {
 			// Hard block for prompt injection and policy bypass attempts
 			resp.Decision = "BLOCK"
 			log.Printf("[GATE] BLOCK score=%d tags=%v", eval.Score, eval.Tags)
@@ -274,8 +275,8 @@ type ExecuteRequest struct {
 
 // ExecuteResponse is the result of a proxy execute call.
 type ExecuteResponse struct {
-	Status   string           `json:"status"`
-	Message  string           `json:"message,omitempty"`
+	Status   string            `json:"status"`
+	Message  string            `json:"message,omitempty"`
 	OpenClaw *OpenClawResponse `json:"openclaw,omitempty"`
 }
 

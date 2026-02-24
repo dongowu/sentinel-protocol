@@ -27,7 +27,7 @@ OpenClaw Agent ─► Sentinel Gate ─► Risk Engine ─► Policy Decision
                          (on-chain event)
 ```
 
-## Why Sentinel Fits the Hackathon
+## Why Sentinel
 
 | What others do | What Sentinel does |
 |---|---|
@@ -36,20 +36,6 @@ OpenClaw Agent ─► Sentinel Gate ─► Risk Engine ─► Policy Decision
 | Static rule lists | **Rules + behavioral detection + semantic hook + human-in-the-loop** |
 | No replay protection | **One-time tokens** prevent action replay |
 | No emergency stop | **Kill switch** with manual arm + automatic consecutive-risk trigger |
-
-### Sui Integration Highlights
-
-- **4 Move modules** deployed on Sui testnet: `sentinel_audit`, `sentinel_audit_integration`, `community_rules`, `lazarus_protocol`
-- **On-chain audit anchoring**: every policy decision can be recorded as an immutable `AuditAnchoredEvent` on Sui
-- **Community governance**: on-chain rule voting registry with quorum-based approval/rejection
-- **Queryable events**: anchored records support post-incident forensics directly from Sui RPC
-
-### OpenClaw Integration Highlights
-
-- **Plugin with 3 agent tools**: `sentinel_gate`, `sentinel_status`, `sentinel_approval` — registered natively in the OpenClaw runtime
-- **Bootstrap hook**: automatically injects mandatory security rules into every agent session
-- **CLI commands**: `openclaw sentinel status`, `openclaw sentinel gate` for operator access
-- **Zero-config enforcement**: the agent cannot bypass the security gate because it's injected as a non-negotiable system policy
 
 ## Quick Start
 
@@ -66,7 +52,7 @@ OpenClaw Agent ─► Sentinel Gate ─► Risk Engine ─► Policy Decision
 # Build Rust CLI (hash + sign tools)
 cd rustcli && cargo build --release
 
-# Build & test Go server (21 tests)
+# Build & test Go server (23 tests)
 cd ../goserver
 go build ./...
 go test -count=1 ./...
@@ -76,7 +62,7 @@ go test -count=1 ./...
 
 ```bash
 cd goserver
-go run . --config config.openclaw.json \
+go run . --config configs/config.openclaw.json \
   --sentinel-proxy --sentinel-proxy-addr 127.0.0.1:18080
 ```
 
@@ -155,13 +141,13 @@ flowchart TB
 |---|---|---|
 | Risk Engine | Rule-based keyword matching + behavioral profiling + semantic hook | `sentinel_guard.go`, `behavioral_detection.go` |
 | Policy Engine | 4-decision system with configurable threshold (default: 70) | `sentinel_guard.go` |
-| Execute Guard | One-time token issuance (30s TTL) + replay prevention | `sentinel_executor_http.go` |
-| Human Approval | Challenge/confirm flow with 5min timeout + expiry watcher | `sentinel_approval_service.go` |
+| Execute Guard | One-time token issuance (30s TTL) + replay prevention | `sentinel_executor.go` |
+| Human Approval | Challenge/confirm flow with 5min timeout + expiry watcher | `sentinel_approval.go` |
 | Kill Switch | Manual arm/disarm + consecutive high-risk auto-trigger (threshold: 3) | `sentinel_controls.go` |
 | Capability Sandbox | Per-agent allowlist for shell / fs / browser / wallet / network | `sentinel_controls.go` |
-| Proof Chain | Hash chain + Merkle root batching + Walrus CID publication | `sentinel_proof_chain.go` |
+| Proof Chain | Hash chain + Merkle root batching + Walrus CID publication | `sentinel_proof.go` |
 | On-Chain Anchor | `sentinel_audit::record_audit` emits queryable events on Sui | `sentinel_audit.move` |
-| HTTP Gateway | 9 REST endpoints for full proxy operation | `sentinel_gateway_http.go` |
+| HTTP Gateway | 9 REST endpoints for full proxy operation | `sentinel_gateway.go` |
 | OpenClaw Plugin | 3 agent tools + bootstrap hook + CLI commands | `openclaw-plugin/` |
 
 ## API Endpoints
@@ -178,105 +164,9 @@ flowchart TB
 | POST | `/sentinel/kill-switch/disarm` | Disarm kill switch |
 | GET | `/health` | Health check |
 
-## OpenClaw Integration
+## Sui Integration
 
-Sentinel is designed as a **native OpenClaw plugin**. It ships as a complete plugin package (`openclaw-plugin/`) that registers directly into the OpenClaw agent runtime:
-
-| Component | What it does |
-|---|---|
-| `sentinel_gate` tool | Agent calls this BEFORE any risky action (EXEC, WALLET, BROWSER, FS, NETWORK, CODE_EDITING). Returns ALLOW/BLOCK/REQUIRE_APPROVAL with one-time token. |
-| `sentinel_status` tool | Real-time system status — kill switch state, proof chain health, pending approvals |
-| `sentinel_approval` tool | Approve or reject pending human-in-the-loop challenges |
-| `agent:bootstrap` hook | **Automatically injects mandatory security rules** into every agent session. The agent cannot start without acknowledging Sentinel policy. |
-| `openclaw sentinel` CLI | Operator commands: `status`, `gate` — accessible from terminal |
-| `/sentinel` auto-reply | Quick status check without invoking AI |
-
-### How It Works
-
-1. OpenClaw loads the `sentinel-guard` plugin at gateway startup
-2. The bootstrap hook injects `SENTINEL_GUARD.md` rules into the agent's system prompt
-3. Before any risky action, the agent **must** call `sentinel_gate` — this is enforced by the injected policy
-4. The gate evaluates risk via the Go control plane and returns a policy decision
-5. Every decision is hashed into the proof chain and can be anchored to Sui
-
-```bash
-# Install plugin + start Sentinel proxy
-cp -r openclaw-plugin/ ~/.openclaw/extensions/sentinel-guard/
-cd goserver && go run . --config config.openclaw.json --sentinel-proxy --sentinel-proxy-addr 127.0.0.1:18080
-openclaw gateway restart  # picks up the plugin automatically
-openclaw sentinel status  # verify integration
-```
-
-> Full setup guide: [docs/USAGE.md](docs/USAGE.md)
-
-## Repository Structure
-
-```
-lazarus-protocol/
-├── goserver/                     # Sentinel control plane & proxy (Go)
-│   ├── main.go                   # Entry point (4 run modes)
-│   ├── sentinel_guard.go         # Risk evaluation + audit recording + Sui anchor
-│   ├── sentinel_gateway_http.go  # 9 HTTP endpoints
-│   ├── sentinel_executor_http.go # One-time token guard
-│   ├── sentinel_approval_service.go # Human approval challenges
-│   ├── sentinel_controls.go      # Kill switch + capability sandbox
-│   ├── sentinel_proof_chain.go   # Hash chain + Merkle + Walrus
-│   ├── behavioral_detection.go   # Behavioral anomaly detection
-│   ├── openclaw_integration.go   # OpenClaw client (CLI + HTTP)
-│   └── config.openclaw.json      # Configuration
-├── openclaw-plugin/                 # OpenClaw plugin source (TypeScript)
-│   ├── index.ts                 # Plugin entry: 3 agent tools + CLI + auto-reply
-│   ├── openclaw.plugin.json     # Plugin manifest
-│   └── hooks/                   # agent:bootstrap hook (inject security rules)
-├── contract/                     # Sui Move contracts (4 modules, deployed on testnet)
-│   └── sources/
-│       ├── sentinel_audit.move           # On-chain audit anchor (AuditAnchoredEvent)
-│       ├── sentinel_audit_integration.move # Enhanced audit with rule/anomaly queries
-│       ├── community_rules.move          # Decentralized rule governance
-│       └── lazarus_protocol.move         # Dead man's switch vault
-├── rustcli/                      # Hash/proof CLI (Rust)
-│   └── src/main.rs               # hash-audit, sign-audit, encrypt-and-store, decrypt
-├── docs/                         # Documentation
-│   ├── SUBMISSION.md             # Hackathon submission package (DeepSurge-ready)
-│   ├── PITCH_3MIN.md             # 3-minute pitch script for judge demo
-│   ├── USAGE.md                  # Full usage guide + OpenClaw integration
-│   ├── ARCHITECTURE.md           # System architecture + data flows
-│   ├── DEMO_RUNBOOK.md           # 5-min hackathon demo script
-│   ├── VERIFICATION.md           # Test commands + expected outputs
-│   ├── SECURITY_WORKFLOWS.md     # Air-gap + audit verification workflows
-│   └── ROADMAP.md                # Risk assessment + future plans
-└── scripts/                      # Helper scripts
-```
-
-## Testing
-
-```bash
-# Go server — 21 tests
-cd goserver
-go test -count=1 ./...
-
-# Move contracts — 3 tests
-cd ../contract
-sui move test
-
-# Rust CLI
-cd ../rustcli
-cargo test -q
-```
-
-### Individual Go Test Paths
-
-```bash
-go test -run TestSentinelProxyE2E ./...              # E2E: gate -> token -> execute -> replay blocked
-go test -run TestSentinelGatewayBlockFlow ./...       # Prompt injection -> hard BLOCK
-go test -run TestSentinelGatewayApprovalFlow ./...    # Wallet -> REQUIRE_APPROVAL -> approve -> token
-go test -run TestManualKillSwitchBlocksExecutePath ./... # Kill switch enforcement
-go test -run TestConsecutiveHighRiskAutoArmsKillSwitch ./... # Consecutive auto-trigger
-go test -run TestCapabilitySandboxBlocks ./...         # Per-agent sandbox
-go test -run TestProofLatestEndpointReturnsLatestBatch ./... # Proof chain integrity
-```
-
-## Sui Testnet Deployment
+### Testnet Deployment
 
 | Item | Value |
 |---|---|
@@ -311,18 +201,118 @@ sui client call \
   --gas-budget 10000000
 ```
 
-## Documentation
+## OpenClaw Integration
 
-| Document | Content |
+Sentinel is designed as a **native OpenClaw plugin**. It ships as a complete plugin package (`openclaw-plugin/`) that registers directly into the OpenClaw agent runtime:
+
+| Component | What it does |
 |---|---|
-| [docs/SUBMISSION.md](docs/SUBMISSION.md) | Submission package: eligibility mapping, evidence checklist, DeepSurge metadata fields |
-| [docs/PITCH_3MIN.md](docs/PITCH_3MIN.md) | Time-boxed 3-minute pitch + demo narration |
-| [docs/USAGE.md](docs/USAGE.md) | Full usage guide, all run modes, OpenClaw integration setup |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layered architecture, data flows, module-to-code mapping |
-| [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md) | 5-min live demo with curl commands |
-| [docs/VERIFICATION.md](docs/VERIFICATION.md) | Test commands + expected outputs |
-| [docs/SECURITY_WORKFLOWS.md](docs/SECURITY_WORKFLOWS.md) | Air-gap proposal + audit verification |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Risk assessment + sprint plan |
+| `sentinel_gate` tool | Agent calls this BEFORE any risky action (EXEC, WALLET, BROWSER, FS, NETWORK, CODE_EDITING). Returns ALLOW/BLOCK/REQUIRE_APPROVAL with one-time token. |
+| `sentinel_status` tool | Real-time system status — kill switch state, proof chain health, pending approvals |
+| `sentinel_approval` tool | Approve or reject pending human-in-the-loop challenges |
+| `agent:bootstrap` hook | **Automatically injects mandatory security rules** into every agent session. The agent cannot start without acknowledging Sentinel policy. |
+| `openclaw sentinel` CLI | Operator commands: `status`, `gate` — accessible from terminal |
+| `/sentinel` auto-reply | Quick status check without invoking AI |
+
+### How It Works
+
+1. OpenClaw loads the `sentinel-guard` plugin at gateway startup
+2. The bootstrap hook injects `SENTINEL_GUARD.md` rules into the agent's system prompt
+3. Before any risky action, the agent **must** call `sentinel_gate` — this is enforced by the injected policy
+4. The gate evaluates risk via the Go control plane and returns a policy decision
+5. Every decision is hashed into the proof chain and can be anchored to Sui
+
+```bash
+# Install plugin + start Sentinel proxy
+cp -r openclaw-plugin/ ~/.openclaw/extensions/sentinel-guard/
+cd goserver && go run . --config configs/config.openclaw.json --sentinel-proxy --sentinel-proxy-addr 127.0.0.1:18080
+openclaw gateway restart  # picks up the plugin automatically
+openclaw sentinel status  # verify integration
+```
+
+> Full setup guide: [docs/USAGE.md](docs/USAGE.md)
+
+## Repository Structure
+
+```
+lazarus-protocol/
+├── goserver/                        # Sentinel control plane & proxy (Go)
+│   ├── main.go                      # Entry point (proxy / eval / oneclick / benchmark modes)
+│   ├── config.go                    # Configuration types and loaders
+│   ├── sentinel_guard.go            # Risk evaluation + audit recording + Sui anchor
+│   ├── sentinel_gateway.go          # 9 HTTP endpoints
+│   ├── sentinel_executor.go         # One-time token guard
+│   ├── sentinel_approval.go         # Human approval challenges
+│   ├── sentinel_controls.go         # Kill switch + capability sandbox
+│   ├── sentinel_proof.go            # Hash chain + Merkle + Walrus
+│   ├── sentinel_benchmark.go        # Red-team benchmark runner
+│   ├── behavioral_detection.go      # Behavioral anomaly detection
+│   ├── policy_gate.go               # Policy gate rules
+│   ├── openclaw_client.go           # OpenClaw client (CLI + HTTP)
+│   ├── configs/                     # Configuration files
+│   └── testdata/                    # Benchmark test cases
+├── openclaw-plugin/                 # OpenClaw plugin source (TypeScript)
+│   ├── index.ts                     # Plugin entry: 3 agent tools + CLI + auto-reply
+│   ├── openclaw.plugin.json         # Plugin manifest
+│   └── hooks/                       # agent:bootstrap hook (inject security rules)
+├── contract/                        # Sui Move contracts (4 modules, deployed on testnet)
+│   └── sources/
+│       ├── sentinel_audit.move              # On-chain audit anchor (AuditAnchoredEvent)
+│       ├── sentinel_audit_integration.move  # Enhanced audit with rule/anomaly queries
+│       ├── community_rules.move             # Decentralized rule governance
+│       └── lazarus_protocol.move            # Dead man's switch vault
+├── rustcli/                         # Hash/proof CLI (Rust)
+│   └── src/main.rs                  # hash-audit, sign-audit
+├── docs/                            # Documentation
+│   ├── SUBMISSION.md                # Hackathon submission
+│   ├── USAGE.md                     # Full usage guide + OpenClaw integration
+│   ├── DEMO_RUNBOOK.md              # 5-min live demo script
+│   ├── BENCHMARK.md                 # Attack benchmark + scoring metrics
+│   └── VERIFICATION.md             # Test commands + expected outputs
+└── scripts/                         # Helper scripts
+    ├── demo_video.sh                # One-click demo recording script
+    ├── run_hackathon_benchmark.sh   # Benchmark runner
+    └── build_judge_evidence.sh      # One-command evidence bundle
+```
+
+## Testing
+
+```bash
+# Go server — 23 tests
+cd goserver
+go test -count=1 ./...
+
+# Move contracts — 3 tests
+cd ../contract
+sui move test
+
+# Rust CLI
+cd ../rustcli
+cargo test -q
+```
+
+### Key Test Paths
+
+```bash
+go test -run TestSentinelProxyE2E ./...              # E2E: gate -> token -> execute -> replay blocked
+go test -run TestSentinelGatewayBlockFlow ./...       # Prompt injection -> hard BLOCK
+go test -run TestSentinelGatewayApprovalFlow ./...    # Wallet -> REQUIRE_APPROVAL -> approve -> token
+go test -run TestManualKillSwitchBlocksExecutePath ./... # Kill switch enforcement
+go test -run TestConsecutiveHighRiskAutoArmsKillSwitch ./... # Consecutive auto-trigger
+go test -run TestCapabilitySandboxBlocks ./...         # Per-agent sandbox
+go test -run TestProofLatestEndpointReturnsLatestBatch ./... # Proof chain integrity
+go test -run TestSentinelEnforceAnchorFailureFailClosedBlocks ./... # Fail-closed anchor mode
+```
+
+### Benchmark
+
+```bash
+# One-command benchmark
+./scripts/run_hackathon_benchmark.sh
+
+# One-command judge evidence bundle (tests + benchmark + logs)
+./scripts/build_judge_evidence.sh
+```
 
 ## License
 

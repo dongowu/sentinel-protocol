@@ -1,14 +1,31 @@
-# Sentinel Protocol - Go Heartbeat Daemon
+# Sentinel Protocol — Go Control Plane
 
-Automated heartbeat service that keeps your Lazarus vault alive by periodically calling the `keep_alive` function on the Sui blockchain.
+Pre-execution security gateway for autonomous AI agents on Sui.
 
-## Features
+## Project Structure
 
-- **Automated Heartbeats**: Sends periodic heartbeat transactions to Sui
-- **Vault Creation**: Integrates with Rust CLI to create new vaults
-- **Graceful Shutdown**: Handles SIGINT/SIGTERM signals properly
-- **Configuration Management**: JSON-based configuration
-- **Error Handling**: Robust error handling with logging
+```
+goserver/
+├── main.go                  # Entry point + CLI flags + run modes
+├── config.go                # Config types + loaders
+├── sentinel_guard.go        # Risk engine + audit records + Sui anchoring
+├── sentinel_gateway.go      # HTTP API (9 endpoints)
+├── sentinel_controls.go     # KillSwitch + CapabilitySandbox
+├── sentinel_proof.go        # Proof chain + Merkle batching + Walrus
+├── sentinel_approval.go     # Human-in-the-loop approval challenges
+├── sentinel_executor.go     # One-time execution tokens
+├── sentinel_benchmark.go    # Red-team benchmark runner
+├── behavioral_detection.go  # Agent profiling + anomaly detection
+├── policy_gate.go           # Policy decision wrapper
+├── openclaw_client.go       # OpenClaw agent integration
+├── legacy_*.go              # Legacy heartbeat/daemon code
+├── *_test.go                # Tests (23 total)
+├── configs/                 # Configuration files
+│   ├── config.openclaw.json
+│   └── config.openclaw.example.json
+└── testdata/                # Benchmark test cases
+    └── benchmark_cases.hackathon.json
+```
 
 ## Installation
 

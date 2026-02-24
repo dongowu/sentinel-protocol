@@ -14,7 +14,7 @@ cd ../goserver && env -u GOROOT GOCACHE=/tmp/go-build-cache-lazarus go test -cou
 
 ```bash
 cd goserver
-go run . --config config.openclaw.json --sentinel-proxy --sentinel-proxy-addr 127.0.0.1:18080
+go run . --config configs/config.openclaw.json --sentinel-proxy --sentinel-proxy-addr 127.0.0.1:18080
 ```
 
 ## 2. Demo Scenarios
