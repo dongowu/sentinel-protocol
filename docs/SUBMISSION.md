@@ -4,7 +4,7 @@
 
 - **Project Name:** Sentinel Protocol
 - **Track:** Track 1 — Safety & Security
-- **Repo:** `https://github.com/dongowu/lazarus-protocol`
+- **Repo:** `https://github.com/dongowu/sentinel-protocol`
 - **Demo Environment:** macOS + OpenClaw + local Sentinel proxy + Sui testnet
 - **Wallet Address (Sui):** `0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1`
 - **Submission Date (PST):** `2026-02-24` _(draft date; update on final submit day before 2026-03-03 11:00 PM PST)_

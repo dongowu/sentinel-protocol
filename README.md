@@ -66,7 +66,7 @@ OpenClaw Agent ─► Sentinel Gate ─► Risk Engine ─► Policy Decision
 # Build Rust CLI (hash + sign tools)
 cd rustcli && cargo build --release
 
-# Build & test Go server (19 tests)
+# Build & test Go server (21 tests)
 cd ../goserver
 go build ./...
 go test -count=1 ./...
@@ -251,7 +251,7 @@ lazarus-protocol/
 ## Testing
 
 ```bash
-# Go server — 19 tests
+# Go server — 21 tests
 cd goserver
 go test -count=1 ./...
 
