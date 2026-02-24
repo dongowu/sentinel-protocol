@@ -6,14 +6,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 )
 
-// OpenClawConfig holds OpenClaw integration settings
+// OpenClawConfig holds OpenClaw integration settings.
+// Integration uses the OpenClaw CLI (`openclaw agent`) which communicates with
+// the Gateway via WebSocket. The sentinel-guard plugin (installed at
+// ~/.openclaw/extensions/sentinel-guard/) provides sentinel_gate, sentinel_status,
+// and sentinel_approval tools to the agent, routing enforcement through the
+// Sentinel HTTP proxy (default http://127.0.0.1:18080).
 type OpenClawConfig struct {
 	Enabled    bool   `json:"enabled"`
-	ServerURL  string `json:"server_url"`
+	ServerURL  string `json:"server_url"` // Sentinel proxy URL (default http://127.0.0.1:18080)
+	AgentID    string `json:"agent_id"`   // OpenClaw agent id (default "main")
 	WakeUpTask string `json:"wake_up_task"`
 	LastWords  string `json:"last_words"`
 }
@@ -128,14 +135,47 @@ func (oc *OpenClawClient) sendTask(actionType, prompt string) error {
 		}
 	}
 
-	// Create request payload
+	_, err := oc.sendTaskWithoutSentinel(prompt)
+	return err
+}
+
+// SendTaskWithoutSentinel sends a task directly to OpenClaw.
+// Use this only when caller already ran policy checks and audit.
+func (oc *OpenClawClient) SendTaskWithoutSentinel(prompt string) (*OpenClawResponse, error) {
+	if !oc.config.Enabled {
+		return nil, fmt.Errorf("OpenClaw is disabled")
+	}
+	return oc.sendTaskWithoutSentinel(prompt)
+}
+
+func (oc *OpenClawClient) sendTaskWithoutSentinel(prompt string) (*OpenClawResponse, error) {
+	agentID := oc.config.AgentID
+	if agentID == "" {
+		agentID = "main"
+	}
+
+	// Primary path: use the OpenClaw CLI which talks to the WebSocket gateway.
+	cmd := exec.Command("openclaw", "agent", "--agent", agentID, "--local", "--message", prompt)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		// Fallback: try a direct HTTP POST to the configured server URL (legacy path).
+		return oc.sendTaskHTTP(prompt)
+	}
+
+	log.Println("✓ OpenClaw accepted the task via CLI")
+	log.Printf("  Agent output: %s", strings.TrimSpace(string(out)))
+	return &OpenClawResponse{Status: "ok", Message: strings.TrimSpace(string(out))}, nil
+}
+
+// sendTaskHTTP sends a task via the legacy HTTP POST path (fallback).
+func (oc *OpenClawClient) sendTaskHTTP(prompt string) (*OpenClawResponse, error) {
 	payload := OpenClawRequest{
 		Task: prompt,
 	}
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	// Send HTTP POST request
@@ -145,19 +185,19 @@ func (oc *OpenClawClient) sendTask(actionType, prompt string) error {
 
 	resp, err := client.Post(oc.config.ServerURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("OpenClaw connection failed: %w", err)
+		return nil, fmt.Errorf("OpenClaw connection failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse response
 	var response OpenClawResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
+		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("OpenClaw returned error: %s - %s", response.Status, response.Message)
+		return nil, fmt.Errorf("OpenClaw returned error: %s - %s", response.Status, response.Message)
 	}
 
 	log.Println("✓ OpenClaw accepted the task")
@@ -167,32 +207,42 @@ func (oc *OpenClawClient) sendTask(actionType, prompt string) error {
 	log.Println("  Browser should open shortly...")
 	log.Println()
 
-	return nil
+	return &response, nil
 }
 
-// TestConnection tests the connection to OpenClaw
+// TestConnection tests connectivity to both the Sentinel proxy and OpenClaw.
 func (oc *OpenClawClient) TestConnection() error {
 	if !oc.config.Enabled {
 		return fmt.Errorf("OpenClaw is disabled")
 	}
 
-	log.Println("🔌 Testing OpenClaw connection...")
+	log.Println("Testing Sentinel + OpenClaw connectivity...")
 
-	client := &http.Client{
-		Timeout: 5 * time.Second,
+	// 1. Check Sentinel proxy
+	sentinelURL := oc.config.ServerURL
+	if sentinelURL == "" {
+		sentinelURL = "http://127.0.0.1:18080"
 	}
-
-	resp, err := client.Get(oc.config.ServerURL + "/health")
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(sentinelURL + "/health")
 	if err != nil {
-		return fmt.Errorf("connection failed: %w", err)
+		return fmt.Errorf("sentinel proxy not reachable at %s: %w", sentinelURL, err)
 	}
-	defer resp.Body.Close()
-
+	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned status %d", resp.StatusCode)
+		return fmt.Errorf("sentinel proxy returned status %d", resp.StatusCode)
+	}
+	log.Println("  Sentinel proxy: OK")
+
+	// 2. Check OpenClaw CLI
+	out, err := exec.Command("openclaw", "gateway", "health").CombinedOutput()
+	if err != nil {
+		log.Printf("  OpenClaw gateway: warning — %s", strings.TrimSpace(string(out)))
+	} else {
+		log.Println("  OpenClaw gateway: OK")
 	}
 
-	log.Println("✓ OpenClaw connection successful")
+	log.Println("Connection test complete")
 	return nil
 }
 

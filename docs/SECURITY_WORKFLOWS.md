@@ -1,32 +1,31 @@
 # Security Workflows
 
-## 1) Wallet Air-Gap (proposal only)
+## 1) Wallet Air-Gap（仅提案，不代签）
 
-Goal: OpenClaw/Sentinel can propose a transaction, but cannot directly move funds.
-
-```bash
-./scripts/propose_wallet_tx.sh \
-  <package> <module> <function> <gas_budget> <arg1> [arg2 ...]
-```
-
-This writes a proposal JSON containing `unsigned_tx_bytes` into `./proposals/`.
-A human/hardware wallet must sign and execute externally:
+Sentinel 只生成提案，不直接代替用户签名转账。
 
 ```bash
-sui client execute-signed-tx --tx-bytes <TX_BYTES> --signatures <SIGS>
+./scripts/propose_wallet_tx.sh <package> <module> <function> <gas_budget> <arg1> [arg2 ...]
 ```
 
-## 2) One-click audit evidence verification
+输出：`./proposals/proposal_*.json`，包含 `unsigned_tx_bytes`。
 
-Goal: verify an anchored decision is both on-chain successful and locally consistent.
+## 2) 一键审计证据验证（链上 + 本地）
 
 ```bash
 ./scripts/verify_audit_evidence.sh <tx_digest> <audit_log_path>
 ```
 
-Checks:
-- on-chain tx status is `Success`
-- local audit entry exists by `tx_digest`
-- local record hash recomputes deterministically from fields
+验证内容：
 
-If all pass, output is `PASS`.
+1. 链上交易成功
+2. 本地审计记录存在
+3. 本地重算哈希与记录值一致
+
+全部通过返回 `PASS`。
+
+## 3) 审批与熔断策略（演示重点）
+
+- 高风险动作进入 `REQUIRE_APPROVAL`
+- 人工拒绝后动作阻断
+- 连续高风险可触发 `TRIGGER_KILL_SWITCH`

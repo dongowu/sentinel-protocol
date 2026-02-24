@@ -37,3 +37,6 @@ goserver/config.openclaw.json
 # Temporary files
 *.tmp
 *.log
+
+# Local Codex worktrees
+.worktrees/
